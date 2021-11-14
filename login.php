@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Login</title>
     <!-- bootstrap -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
     <!-- bootstrap -->
@@ -14,7 +14,16 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
-    <!-- bootstrap -->    
+    <!-- bootstrap -->  
+    <style>
+        .containerLg {
+            margin-top: 100px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #efefef;
+        }
+    </style>  
 </head>
 
 <body onload='document.querySelector("#user").focus();'>
@@ -24,13 +33,15 @@
     <div class="row">
         <div class="offset-4 col-md-3">
             <div class="form-group">
-                <form action="index.php" method="post" onsubmit="return checkLogin();">
-                    <label for="user">user</label>
-                    <input type="text" id="user" name="user" class="form-control" maxlength="20" required autocomplete="username" value="">
-                    <label for="pass">pass</label>
-                    <input type="password" id="pass" name="pass" class="form-control" maxlength="20" required autocomplete="new-password" value="">
-                    <input type="submit" value="login" class="btn btn-primary">
-                </form>
+                <div class="containerLg">
+                    <form action="index.php" method="post" onsubmit="return checkLogin();">
+                        <label for="user">user</label>
+                        <input type="text" id="user" name="user" class="form-control" maxlength="20" required autocomplete="username" value="">
+                        <label for="pass">pass</label>
+                        <input type="password" id="pass" name="pass" class="form-control" maxlength="20" required autocomplete="new-password" value="">
+                        <input type="submit" value="login" class="mt-4 btn btn-primary form-control">
+                    </form>
+                </div>
             </div>
         </div>
     </div>
