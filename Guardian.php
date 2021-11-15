@@ -165,6 +165,9 @@ class Guardian
             }
         }
         self::init();
+        if ( !self::isPostOrigin() ) {
+            die('Invalid origin.');
+        }
         $post_user = self::getPostUser();
         $post_pass = self::getPostPass();
         if ($post_user && $post_pass) {
@@ -284,6 +287,17 @@ class Guardian
         return $file;
     }
 
+    // check post origin
+    private static function isPostOrigin(){
+        $h = basename($_SERVER['HTTP_HOST']);
+        $o = basename($_SERVER['HTTP_ORIGIN']);
+        $r = explode('/',self::remove_http($_SERVER['HTTP_REFERER']))[0];
+        $m = $_SERVER['REQUEST_METHOD'];
+        if ($h == $o && $o == $r && $m == 'POST') {
+            return true;
+        }
+        return false;
+    }
 
     // get the post username from form
     private static function getPostUser()
