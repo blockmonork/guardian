@@ -258,7 +258,7 @@ class Guardian
      */
     public static function require_page($page)
     {
-
+        $page = self::remove_http($page);
         if (file_exists($page)) {
             require($page);
         } else {
@@ -276,6 +276,7 @@ class Guardian
         header("Location: $page");
         exit;
     }
+    
 
     /////////////////////////////////////// PRIVATE METHODS //////////////////////////////////
 
