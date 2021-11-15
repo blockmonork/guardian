@@ -281,7 +281,7 @@ class Guardian
     /////////////////////////////////////// PRIVATE METHODS //////////////////////////////////
 
     // get the $_SERVER key
-    private static function getServerKey($key)
+    private static function getServer($key)
     {
         $key = strtoupper($key);
         return (isset($_SERVER[$key])) ? $_SERVER[$key] : '';
@@ -301,16 +301,19 @@ class Guardian
     // check post origin
     private static function isPostOrigin()
     {
-        $h = self::getServerKey('HTTP_HOST');
-        if($h=='')return false;
-        $h = basename($_SERVER['HTTP_HOST']);
-        $o = self::getServerKey('HTTP_ORIGIN');
-        if($o=='')return false;
-        $o = basename($_SERVER['HTTP_ORIGIN']);
-        $r = self::getServerKey('HTTP_REFERER');
-        if($r=='')return false;
-        $r = explode('/', self::remove_http($_SERVER['HTTP_REFERER']))[0];
-        $m = $_SERVER['REQUEST_METHOD'];
+        $keys = ['http_host', 'http_origin', 'http_referer', 'request_method'];
+        $vals = [];
+        foreach ( $keys as $key ){
+            $temp = self::getServer($key);
+            if ( $temp == '' ){
+                return false;
+            }
+            array_push($vals, $temp);
+        }
+        list($h,$o,$r,$m) = $vals;
+        $h = basename($h);
+        $o = basename($o);
+        $r = explode('/', self::remove_http($r))[0];
         if ($h == $o && $o == $r && $m == 'POST') {
             return true;
         }
