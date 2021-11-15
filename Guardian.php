@@ -276,7 +276,7 @@ class Guardian
         header("Location: $page");
         exit;
     }
-    
+
 
     /////////////////////////////////////// PRIVATE METHODS //////////////////////////////////
 
@@ -418,18 +418,19 @@ class Guardian
     // get ban_file and store it in an array(ip => [ban_time, ban_expires])
     private static function get_ban_file()
     {
-        $ban_file = self::$BAN_FILE;
-        self::$BAN_FILE_ARRAY = array();
-        if (file_exists($ban_file)) {
-            $file_handle = fopen($ban_file, 'r');
-            while (!feof($file_handle)) {
-                $line = fgets($file_handle);
-                $line_array = explode(',', $line);
-                if (count($line_array) == 3) {
-                    self::$BAN_FILE_ARRAY[$line_array[0]] = array($line_array[1], $line_array[2]);
+        if ( count(self::$BAN_FILE_ARRAY) == 0 ){
+            $ban_file = self::$BAN_FILE;
+            if (file_exists($ban_file)) {
+                $file_handle = fopen($ban_file, 'r');
+                while (!feof($file_handle)) {
+                    $line = fgets($file_handle);
+                    $line_array = explode(',', $line);
+                    if (count($line_array) == 3) {
+                        self::$BAN_FILE_ARRAY[$line_array[0]] = array($line_array[1], $line_array[2]);
+                    }
                 }
+                fclose($file_handle);
             }
-            fclose($file_handle);
         }
     }
 
