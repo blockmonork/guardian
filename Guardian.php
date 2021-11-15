@@ -280,6 +280,13 @@ class Guardian
 
     /////////////////////////////////////// PRIVATE METHODS //////////////////////////////////
 
+    // get the $_SERVER key
+    private static function getServerKey($key)
+    {
+        $key = strtoupper($key);
+        return (isset($_SERVER[$key])) ? $_SERVER[$key] : '';
+    }
+
     // generate function thar removes http:// or https:// or www. from url
     private static function remove_http($_file)
     {
@@ -294,8 +301,14 @@ class Guardian
     // check post origin
     private static function isPostOrigin()
     {
+        $h = self::getServerKey('HTTP_HOST');
+        if($h=='')return false;
         $h = basename($_SERVER['HTTP_HOST']);
+        $o = self::getServerKey('HTTP_ORIGIN');
+        if($o=='')return false;
         $o = basename($_SERVER['HTTP_ORIGIN']);
+        $r = self::getServerKey('HTTP_REFERER');
+        if($r=='')return false;
         $r = explode('/', self::remove_http($_SERVER['HTTP_REFERER']))[0];
         $m = $_SERVER['REQUEST_METHOD'];
         if ($h == $o && $o == $r && $m == 'POST') {
