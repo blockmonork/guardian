@@ -31,7 +31,7 @@
 
 
     <div class="row">
-        <div class="offset-4 col-md-3">
+        <div class="offset-4 col-lg-3">
             <div class="form-group">
                 <div class="containerLg">
                     <form action="index.php" method="post" onsubmit="return checkLogin();">

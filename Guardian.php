@@ -6,10 +6,10 @@ namespace Core;
  * 
  * @author FAFM & copilot :) (nice help bro)
  * @version 1.0
- * @license http://www.apache.org/licenses/LICENSE-2.0
+ * @license GNU GENERAL PUBLIC LICENSE 3
  * @access public
  * 
- * see end of file for more info
+ * see at the end of this file for more info
  * 
  */
 
@@ -95,6 +95,13 @@ class Guardian
         self::getAntiBruteForceTime();
         self::$CREDENTIALS_MODE = $mode;
         self::init();
+    }
+
+    // set hardcoded credentials (not recommended)
+    public static function setHardCredentials($user, $pass)
+    {
+        self::$HARD_USER = $user;
+        self::$HARD_PASS = $pass;
     }
 
     // init gathering credentials from the user and other checks 
@@ -459,22 +466,24 @@ class Guardian
  * example: file 3 - hello.php (visible only for logged users)
  * 
  * 
+
 header('Content-Type:text/html; charset=UTF-8');
 
-// require class
 use Core\Guardian;
 
+// require class
 require('Guardian.php');
-// setAntiBruteForce && setAntiBruceForceTime must be set first of all
+// setAntiBruteForce && setAntiBruceForceTime must be set first of all if you want to use the anti brute force feature
 // set Guardian::setCredentialsMode (1:hardcoded, 2:env [default]) must be set before Guardian::init()
+// if credentials mode is set to 1, Guardian::setHardCredentials must be set before Guardian::init()
 // must be the 1st call if you want to use hardcoded credentials
 // Guardian::init();
 
 
-
 //Guardian::logout(); exit("ok"); // manual stops all
 
-// allows login fail?
+// allows login fail? if false, exit after 1st fail
+// @override MAX_LOGIN_FAIL
 $ALLOWS_LOGIN_FAIL = false;
 
 Guardian::setAllowLoginFail($ALLOWS_LOGIN_FAIL);
@@ -487,7 +496,16 @@ if ($MAX_LOGIN_FAIL > 0) {
 }
 
 // setting the page to logged user in
-$LOGGED_PAGE = 'WWW/index.php';
+$LOGGED_PAGE = 'hello.php';
+
+// setting the login page (root/login.php) default.
+$LOGIN_PAGE = 'login.php';
+Guardian::setLoginPage($LOGIN_PAGE);
+
+// the default names for form fields for username and password are user, pass
+// you can change them by setting the following
+Guardian::setFormFields('user', 'pass');
+
 
 // logout
 if (isset($_GET['logout'])) {

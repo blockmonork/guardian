@@ -5,8 +5,9 @@ use Core\Guardian;
 
 // require class
 require('Guardian.php');
-// setAntiBruteForce && setAntiBruceForceTime must be set first of all
+// setAntiBruteForce && setAntiBruceForceTime must be set first of all if you want to use the anti brute force feature
 // set Guardian::setCredentialsMode (1:hardcoded, 2:env [default]) must be set before Guardian::init()
+// if credentials mode is set to 1, Guardian::setHardCredentials must be set before Guardian::init()
 // must be the 1st call if you want to use hardcoded credentials
 // Guardian::init();
 
