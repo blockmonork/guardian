@@ -165,7 +165,7 @@ class Guardian
             }
         }
         self::init();
-        if ( !self::isPostOrigin() ) {
+        if (!self::isPostOrigin()) {
             die('Invalid origin.');
         }
         $post_user = self::getPostUser();
@@ -239,6 +239,9 @@ class Guardian
     public static function has_form_submitted(array $fields)
     {
         self::getAntiBruteForceTime();
+        if (!self::isPostOrigin()) {
+            return false;
+        }
         $total = count($fields);
         $submitted = 0;
         foreach ($fields as $field) {
@@ -288,10 +291,11 @@ class Guardian
     }
 
     // check post origin
-    private static function isPostOrigin(){
+    private static function isPostOrigin()
+    {
         $h = basename($_SERVER['HTTP_HOST']);
         $o = basename($_SERVER['HTTP_ORIGIN']);
-        $r = explode('/',self::remove_http($_SERVER['HTTP_REFERER']))[0];
+        $r = explode('/', self::remove_http($_SERVER['HTTP_REFERER']))[0];
         $m = $_SERVER['REQUEST_METHOD'];
         if ($h == $o && $o == $r && $m == 'POST') {
             return true;
