@@ -12,6 +12,7 @@ use Core\Guardian;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo Guardian::getLoginPageTitle(); ?></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!--Import Google Icon Font-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Compiled and minified CSS -->
@@ -28,7 +29,6 @@ use Core\Guardian;
             border-radius: 10px;
             padding: 20px;
             background-color: #efefef;
-            width: 33%
         }
 
         h3 {
@@ -39,7 +39,7 @@ use Core\Guardian;
 </head>
 
 <body>
-    <div class="containerLg">
+    <div class="containerLg container">
         <h3 class="valign-wrapper">
             <i class="material-icons left">lock</i>
             <?php echo Guardian::getLoginPageTitle(); ?>
@@ -50,7 +50,7 @@ use Core\Guardian;
                 <div class="row">
                     <div class="input-field col s12">
                         <i class="material-icons prefix">account_circle</i>
-                        <input id="<?php echo Guardian::getFormFields()[0]; ?>" name="<?php echo Guardian::getFormFields()[0]; ?>" type="text" class="validate" autocomplete="username" required maxlength="<?php echo Guardian::getFormMaxLength(); ?>">
+                        <input id="<?php echo Guardian::getFormFields()[0]; ?>" name="<?php echo Guardian::getFormFields()[0]; ?>" type="text" class="validate" autocomplete="username" required maxlength="<?php echo Guardian::getFormMaxLength(); ?>" data-length="<?php echo Guardian::getFormMaxLength(); ?>">
                         <label for="user">First Name</label>
                         <span id="user_helper" class="helper-text" data-error="wrong" data-success="right"></span>
                     </div>
@@ -58,7 +58,7 @@ use Core\Guardian;
                 <div class="row">
                     <div class="input-field col s12">
                         <i class="material-icons prefix">verified_user</i>
-                        <input id="<?php echo Guardian::getFormFields()[1]; ?>" name="<?php echo Guardian::getFormFields()[1]; ?>" type="password" class="validate" autocomplete="new-password" required maxlength="<?php echo Guardian::getFormMaxLength(); ?>">
+                        <input id="<?php echo Guardian::getFormFields()[1]; ?>" name="<?php echo Guardian::getFormFields()[1]; ?>" type="password" class="validate" autocomplete="new-password" required maxlength="<?php echo Guardian::getFormMaxLength(); ?>" data-length="<?php echo Guardian::getFormMaxLength(); ?>">
                         <label for="pass">Password</label>
                         <span id="pass_helper" class="helper-text" data-error="wrong" data-success="right"></span>
                     </div>
@@ -105,6 +105,9 @@ use Core\Guardian;
         }), document.querySelector("#" + P).addEventListener("change", function(e) {
             checkLogin()
         });
+        $(document).ready(function(){
+            $('input#user, input#pass').characterCounter();
+        })
     </script>
 </body>
 
