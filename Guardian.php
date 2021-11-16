@@ -265,7 +265,7 @@ class Guardian
         self::getAntiBruteForceTime();
         // before, check if the user IP is banned
         if (self::is_banned()) {
-            exit('You are not allowed to access this Page.');
+            self::die_message('You are not allowed to access this Page.');
         }
         self::$CREDENTIALS_MODE = self::getSessVar('credentials_mode');
         if (self::$CREDENTIALS_MODE == 1) {
@@ -281,7 +281,7 @@ class Guardian
         self::$PASS = trim(self::$PASS);
         // if credentials are not set, then exit
         if (self::$USER == '' || self::$PASS == '') {
-            exit('Credentials not set');
+            self::die_message('Credentials not set');
         }
     }
 
@@ -341,7 +341,7 @@ class Guardian
         // check brute force
         if (self::$ANTI_BRUTE_FORCE) {
             if (self::isBruteForce()) {
-                die('Brute force detected. Please try again later.');
+                self::die_message('Brute force detected. Please try again later.');
             }
         }
         $post_user = self::getPostUser();
@@ -389,7 +389,7 @@ class Guardian
     public static function die_if_not_logged_in()
     {
         self::ban_user();
-        die("You are not logged in!");
+        self::die_message("You are not logged in!");
     }
 
     // check if the form has submitted the fields specified in array
@@ -426,7 +426,7 @@ class Guardian
         if (file_exists($page)) {
             require_once($page);
         } else {
-            die("The page you are looking for does not exist!");
+            self::die_message("The page you are looking for does not exist!");
         }
     }
 
@@ -440,7 +440,7 @@ class Guardian
     {
         $page = self::remove_http($page);
         if (!file_exists($page)) {
-            die("The page you are looking for does not exist!");
+            self::die_message("The page you are looking for does not exist!");
         }
         header("Location: $page");
         exit;
@@ -455,7 +455,7 @@ class Guardian
     {
         // check if user is banned first of all
         if (self::is_banned()) {
-            die("You are not allowed to access this page.");
+            self::die_message("You are not allowed to access this page.");
         }
         // and then, check for logout request
         if (isset($_GET['logout'])) {
@@ -727,8 +727,7 @@ class Guardian
             // ban the user
             self::ban_user();
             // if the login failure times is greater than the max login failure times, die
-            die('You have exceeded the maximum number of login attempts. Please try again later.');
-            //die("debug fail times " . self::$LOGIN_FAIL_TIMES);
+            self::die_message('You have exceeded the maximum number of login attempts. Please try again later.');
         }
         return true;
     }
@@ -777,7 +776,7 @@ class Guardian
         self::get_ban_file();
         $ip = self::getServer('remote_addr');
         if ( empty($ip) ){
-            die("dont you have an IP?! ");
+            self::die_message("dont you have an IP?! ");
         }
         if (isset(self::$BAN_FILE_ARRAY[$ip])) {
             if (self::$BAN_FILE_ARRAY[$ip][1] > time()) {
@@ -822,7 +821,10 @@ class Guardian
     private static function ban_user()
     {
         if (!self::is_banned()) {
-            $ip = $_SERVER['REMOTE_ADDR'];
+            $ip = self::getServer('remote_addr');
+            if ( empty($ip) ){
+                self::die_message("dont you have an IP?! ");
+            }
             $ban_file = self::$BAN_FILE;
             self::$BAN_FILE_ARRAY[$ip] = array(time(), time() + self::$BAN_TIME);
             $file_handle = fopen($ban_file, 'w');
@@ -831,5 +833,15 @@ class Guardian
             }
             fclose($file_handle);
         }
+    }
+    // print messages and dies
+    /**
+     * print messages and dies
+     * @param string $message the message to print
+     * @return void
+     */
+    private static function die_message($message)
+    {
+        die($message);
     }
 }
