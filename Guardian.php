@@ -775,7 +775,10 @@ class Guardian
     private static function is_banned()
     {
         self::get_ban_file();
-        $ip = $_SERVER['REMOTE_ADDR'];
+        $ip = self::getServer('remote_addr');
+        if ( !$ip ){
+            die("dont you have an IP?! ");
+        }
         if (isset(self::$BAN_FILE_ARRAY[$ip])) {
             if (self::$BAN_FILE_ARRAY[$ip][1] > time()) {
                 return true;
