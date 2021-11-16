@@ -845,3 +845,4 @@ class Guardian
         die($message);
     }
 }
+// END of file
