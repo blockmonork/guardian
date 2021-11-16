@@ -16,7 +16,7 @@ require('Guardian.php');
 # Guardian::setCredentialsMode(1);
 
 // if credentials mode is set to 1, Guardian::setHardCredentials must be set 
-# Guardian::setHardCredentials('fafmm', '1234fF.'); //('your_user', 'your_pass');
+# Guardian::setHardCredentials('your_user', 'your_pass'); //('your_user', 'your_pass');
 
 // seting banishement time in seconds (how long the banishment takes) (default: 60)
 # Guardian::setBanishmentTime(60);
