@@ -776,7 +776,7 @@ class Guardian
     {
         self::get_ban_file();
         $ip = self::getServer('remote_addr');
-        if ( !$ip ){
+        if ( empty($ip) ){
             die("dont you have an IP?! ");
         }
         if (isset(self::$BAN_FILE_ARRAY[$ip])) {
