@@ -5,67 +5,62 @@ use Core\Guardian;
 
 // require class
 require('Guardian.php');
-// setAntiBruteForce && setAntiBruceForceTime must be set first of all if you want to use the anti brute force feature
-// set Guardian::setCredentialsMode (1:hardcoded, 2:env [default]) must be set before Guardian::init()
-// if credentials mode is set to 1, Guardian::setHardCredentials must be set before Guardian::init()
-// must be the 1st call if you want to use hardcoded credentials
-// Guardian::init();
+
+// setAntiBruteForce must be set first of all if you don't want to use the anti brute force feature (default is true)
+# Guardian::setAntiBruteForce(true);
+
+// if you want to use the anti brute force feature, you must set setAntiBruceForceTime to the time in seconds (default is 1)
+# Guardian::setAntiBruteForceTime(1);
+
+// set Guardian::setCredentialsMode (1:hardcoded, 2:env [default]) 
+# Guardian::setCredentialsMode(1);
+
+// if credentials mode is set to 1, Guardian::setHardCredentials must be set 
+# Guardian::setHardCredentials('fafmm', '1234fF.'); //('your_user', 'your_pass');
+
+// seting banishement time in seconds (how long the banishment takes) (default: 60)
+# Guardian::setBanishmentTime(60);
+
+// setting the maxlength of the form fields (default: 20 characters)
+# Guardian::setFormMaxLength(20);
+
+// setting the field names for the login form page.
+// the default names are: user, pass
+// you can change them by setting the following
+# Guardian::setFormFields('user', 'pass');
 
 
-//Guardian::logout(); exit("ok"); // manual stops all
+// allows login fail? if false, exit after 1st fail try (default: true)
+// @override LOGIN_FAIL_TIMES
+$ALLOW_LOGIN_FAIL = true;
+Guardian::setAllowLoginFail($ALLOW_LOGIN_FAIL);
 
-// allows login fail? if false, exit after 1st fail
-// @override MAX_LOGIN_FAIL
-$ALLOWS_LOGIN_FAIL = false;
 
-Guardian::setAllowLoginFail($ALLOWS_LOGIN_FAIL);
-
+// setting how many tries before banishment (default: 3)
 // if MAX_LOGIN_FAIL > 0, then the login will be blocked if the user fails to login MAX_LOGIN_FAIL times
-$MAX_LOGIN_FAIL = 3;
+$LOGIN_FAIL_TIMES = 3;
 
-if ($MAX_LOGIN_FAIL > 0) {
-    Guardian::setLoginFailTimes($MAX_LOGIN_FAIL);
+if ($LOGIN_FAIL_TIMES > 0) {
+    Guardian::setLoginFailTimes($LOGIN_FAIL_TIMES);
 }
 
-// setting the page to logged user in
+// setting the page to logged user in (relative path to Guardian.php) (default ./hello.php)
+// look at the hello.php file for more information about the use of the guardianMonitor.php file
 $LOGGED_PAGE = 'hello.php';
+Guardian::setLoggedPage($LOGGED_PAGE);
 
-// setting the login page (root/login.php) default.
+// setting the login page (relative path to Guardian.php) (default: ./login.php)
+// if you choose different page, look at the code of the login page to see how to use Guardian
 $LOGIN_PAGE = 'login.php';
 Guardian::setLoginPage($LOGIN_PAGE);
 
-// the default names for form fields for username and password are user, pass
-// you can change them by setting the following
-Guardian::setFormFields('user', 'pass');
+// set login page title
+$LOGIN_PAGE_TITLE = 'Guardian ' . Guardian::getVersion() . ' Login';
+Guardian::setLoginPageTitle($LOGIN_PAGE_TITLE);
 
+// setting the main page (this one) (relative path to Guardian.php) (default ./index.php)
+$MAIN_PAGE = 'index.php';
+Guardian::setMainPage($MAIN_PAGE);
 
-// logout
-if (isset($_GET['logout'])) {
-    Guardian::logout();
-    // quick reload page
-    header("Location: index.php");
-}
-
-
-// checks whether the form submitted the post user and post pass
-if (Guardian::has_form_submitted(['user', 'pass'])) {
-    // if the user and pass are correct, log the user in
-    if (Guardian::login()) {
-        //Guardian::require_page($LOGGED_PAGE);
-        Guardian::redirect($LOGGED_PAGE);
-    } else {
-        // if login fails, die!
-        if (!$ALLOWS_LOGIN_FAIL || ($MAX_LOGIN_FAIL > 0 && Guardian::getLoginFailTimes() >= $MAX_LOGIN_FAIL)) {
-            Guardian::die_if_not_logged_in();
-        } else {
-            Guardian::redirect_if_not_valid_token();
-        }
-    }
-} else {
-    if (!Guardian::is_logged_in()) {
-        Guardian::redirect_if_not_valid_token();
-    } else {
-        //Guardian::require_page($LOGGED_PAGE);
-        Guardian::redirect($LOGGED_PAGE);
-    }
-}
+// start the Guardian
+Guardian::start();

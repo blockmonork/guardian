@@ -1,102 +1,111 @@
-<?php header('Content-type:text/html; charset=UTF-8'); ?>
+<?php
+header('Content-type:text/html; charset=UTF-8');
+
+use Core\Guardian;
+
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <!-- bootstrap -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
-    <!-- bootstrap -->
-
-    <!-- bootstrap -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
-    <!-- bootstrap -->  
+    <title><?php echo Guardian::getLoginPageTitle(); ?></title>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" media="screen,projection" type="text/css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <style>
         .containerLg {
-            margin-top: 100px;
+            margin-top: 50px;
+            margin-right: auto;
+            margin-bottom: auto;
+            margin-left: auto;
             border: 1px solid #ccc;
             border-radius: 10px;
             padding: 20px;
             background-color: #efefef;
+            width: 33%
         }
-    </style>  
+
+        h3 {
+            text-shadow: 1px 2px 0 grey;
+            margin-top: -5px
+        }
+    </style>
 </head>
 
-<body onload='document.querySelector("#user").focus();'>
-
-
-
-    <div class="row">
-        <div class="offset-4 col-lg-3">
-            <div class="form-group">
-                <div class="containerLg">
-                    <form action="index.php" method="post" onsubmit="return checkLogin();">
-                        <label for="user">user</label>
-                        <input type="text" id="user" name="user" class="form-control" maxlength="20" required autocomplete="username" value="">
-                        <label for="pass">pass</label>
-                        <input type="password" id="pass" name="pass" class="form-control" maxlength="20" required autocomplete="new-password" value="">
-                        <input type="submit" value="login" class="mt-4 btn btn-primary form-control">
-                    </form>
+<body>
+    <div class="containerLg">
+        <h3 class="valign-wrapper">
+            <i class="material-icons left">lock</i>
+            <?php echo Guardian::getLoginPageTitle(); ?>
+        </h3>
+        <div class="row">
+            <form class="col s12" action="index.php" method="post" onsubmit="return checkLogin();">
+                <?php echo Guardian::getFormToken(); ?>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">account_circle</i>
+                        <input id="<?php echo Guardian::getFormFields()[0]; ?>" name="<?php echo Guardian::getFormFields()[0]; ?>" type="text" class="validate" autocomplete="username" required maxlength="<?php echo Guardian::getFormMaxLength(); ?>">
+                        <label for="user">First Name</label>
+                        <span id="user_helper" class="helper-text" data-error="wrong" data-success="right"></span>
+                    </div>
                 </div>
-            </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <i class="material-icons prefix">verified_user</i>
+                        <input id="<?php echo Guardian::getFormFields()[1]; ?>" name="<?php echo Guardian::getFormFields()[1]; ?>" type="password" class="validate" autocomplete="new-password" required maxlength="<?php echo Guardian::getFormMaxLength(); ?>">
+                        <label for="pass">Password</label>
+                        <span id="pass_helper" class="helper-text" data-error="wrong" data-success="right"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <button type="submit" onclick="sdmt()" id="btn-submit" class="btn btn-large waves-effect waves-light col s12">
+                            login
+                            <i class="material-icons left">lock_open</i>
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
-
-    <p id="result"></p>
-
     <script>
-        // copilot trainning
-        // create javascript function to strong check values for user and password
+        var MinLen = 4;
+        var MaxLen = <?php echo Guardian::getFormMaxLength(); ?>;
+        var U = "<?php echo Guardian::getFormFields()[0]; ?>";
+        var P = "<?php echo Guardian::getFormFields()[1]; ?>";
+        var msgLen = `must be between ${MinLen} and ${MaxLen} characters`;
+
+        function sbmt() {
+            checkLogin() && document.forms[0].submit()
+        }
+
+        function setHelper(e, t) {
+            document.getElementById(e + "_helper").setAttribute("data-error", t), document.getElementById(e + "_helper").setAttribute("data-success", t)
+        }
+
         function checkLogin() {
-            var user = document.getElementById('user').value;
-            var pass = document.getElementById('pass').value;
-            if (user.length < 4 || user.length > 20) {
-                alert('user must be between 5 and 20 characters');
-                return false;
-            }
-            if (pass.length < 8 || pass.length > 20) {
-                alert('pass must be between 5 and 20 characters');
-                return false;
-            }
-            // checkPass before return 
-            return checkPass();
+            var e = document.getElementById(U).value,
+                t = document.getElementById(P).value,
+                s = !0;
+            return e.length < MinLen || e.length > MaxLen ? (setHelper("user", `user ${msgLen}`), s = !1) : setHelper("user", "right"), t.length < MinLen || t.length > MaxLen ? (setHelper("pass", `pass ${msgLen}`), s = !1) : setHelper("pass", "right"), !!s && checkPass()
         }
-        // function to analyze if a password has complexity
+
         function checkPass() {
-            var pass = document.getElementById('pass').value;
-            var upper = /[A-Z]/;
-            var lower = /[a-z]/;
-            var number = /[0-9]/;
-            var special = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
-            if (pass.length < 8) {
-                alert('password must be at least 8 characters');
-                return false;
-            }
-            if (!upper.test(pass)) {
-                alert('password must contain at least one uppercase letter');
-                return false;
-            }
-            if (!lower.test(pass)) {
-                alert('password must contain at least one lowercase letter');
-                return false;
-            }
-            if (!number.test(pass)) {
-                alert('password must contain at least one number');
-                return false;
-            }
-            if (!special.test(pass)) {
-                alert('password must contain at least one special character');
-                return false;
-            }
-            return true;
+            var e = document.getElementById(P).value;
+            return /[A-Z]/.test(e) ? /[a-z]/.test(e) ? /[0-9]/.test(e) ? /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(e) ? (setHelper("pass", "right"), !0) : (setHelper("pass", "pass must contain at least one special character"), !1) : (setHelper("pass", "pass must contain at least one number"), !1) : (setHelper("pass", "pass must contain at least one lowercase letter"), !1) : (setHelper("pass", "pass must contain at least one uppercase letter"), !1)
         }
+        document.querySelector("#user").focus(), document.querySelector("#" + U).addEventListener("change", function(e) {
+            checkLogin()
+        }), document.querySelector("#" + P).addEventListener("change", function(e) {
+            checkLogin()
+        });
     </script>
-
-
 </body>
 
 </html>
