@@ -94,6 +94,74 @@ class Guardian
         return self::$_VERSION;
     }
 
+    // function that prints header Information
+    /**
+     * 
+     * @return void
+     */
+    public static function printHeader(){
+        /*
+        script-src allowed domains:
+        *.googleapis.com
+        *.cloudflare.com
+        https://developer.mozilla.org/pt-BR/docs/Web/HTTP/CSP
+
+        "Content-Security-Policy: 
+        default-src 'self' 'unsafe-inline'; 
+        img-src 'self'; 
+        child-src 'self' blob:; 
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+        
+        debuging:
+        Content-Security-Policy-Report-Only: policy
+        TO-DO:
+        read this
+        https://developers.google.com/web/fundamentals/security/csp#policy_applies_to_a_wide_variety_of_resources
+
+        */
+
+        $allowedDomains = [
+            '*.googleapis.com',
+            '*.gstatic.com',
+            '*.cloudflare.com',       
+            '*.jquery.com',
+            '*.jsdelivr.net',
+            '*.bootstrapcdn.com',
+        ];
+        $CSP = [
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' %s;",
+            "img-src 'self' 'unsafe-eval';",
+            "child-src 'self' blob:;",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' %s;"
+        ];
+        $CSP_string = '';
+        $allowed = '';
+        foreach($allowedDomains as $domain){
+            $allowed .= $domain . ' ';
+        }
+        foreach ( $CSP as $_csp ){
+            if ( preg_match('/\%s/', $_csp) ){
+                $CSP_string .= sprintf($_csp, $allowed) . ' ';
+            }else{
+                $CSP_string .= $_csp . ' ';
+            }
+        }
+        $infos = [
+            "X-Frame-Options: SAMEORIGIN",
+            "X-Content-Type-Options: nosniff",
+            "Content-Type: text/html; charset=UTF-8",
+            "Set-Cookie: xyz=abc; SameSite=Strict",
+            "Content-Security-Policy: $CSP_string",
+            "X-XSS-Protection: 1; mode=block",
+            "Cache-Control: no-store, no-cache, must-revalidate",
+            /*"Content-Security-Policy-Report-Only: policy",*/
+        ];
+        foreach ($infos as $info) {
+            header($info);
+        }
+    }
+
+
     // function to set the login page
     /**
      * @param string $page the login page

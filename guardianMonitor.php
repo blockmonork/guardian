@@ -14,6 +14,7 @@ function guardianMonitor(string $redirectTo = 'index.php', string $guardianPath 
         die('Guardian.php not found');
     }
     require($guardianPath . 'Guardian.php');
+    Guardian::printHeader();
     if (!Guardian::is_logged_in()) {
         Guardian::redirect($redirectTo);
     }

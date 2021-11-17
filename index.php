@@ -1,10 +1,12 @@
 <?php
-header('Content-Type:text/html; charset=UTF-8');
 
 use Core\Guardian;
 
 // require class
 require('Guardian.php');
+
+// first of all, output header Information
+Guardian::printHeader();
 
 // setAntiBruteForce must be set first of all if you don't want to use the anti brute force feature (default is true)
 # Guardian::setAntiBruteForce(true);

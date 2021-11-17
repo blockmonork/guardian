@@ -1,7 +1,9 @@
 <?php
-header('Content-type:text/html; charset=UTF-8');
+//header('Content-type:text/html; charset=UTF-8');
 
 use Core\Guardian;
+
+Guardian::printHeader();
 
 
 ?>
