@@ -3,13 +3,14 @@
 
 //foreach ( $_SERVER as $key => $val ){ echo "$key: $val<br>"; }
 
-
-
 use Core\Guardian;
 
 require ('Guardian.php');
+
 $debug = false;
-$guardian = new Guardian($debug);
+$refreshSession = false;
+
+$guardian = new Guardian($debug, $refreshSession);
 
 $guardian->setup(
     [
@@ -17,3 +18,5 @@ $guardian->setup(
         'banishment_expires' => 90,
     ]
 )->print_header()->start()->monitore();
+
+// and its done!

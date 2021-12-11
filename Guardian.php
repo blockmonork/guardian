@@ -16,9 +16,12 @@ class Guardian
     private $debug_msg = [];
 
 
-    public function __construct($debug = false)
+    public function __construct($debug = false, $refreshSession = false)
     {
         $this->debug = $debug;
+        if ( $refreshSession && $this->is_session_set('start_time')){
+            $this->destroy_session();
+        }
 
         $this->always_refresh = [
             'http_response_code',
@@ -36,7 +39,7 @@ class Guardian
             'start_time' => time(),  // 1 per session'
             'html_form_start_time' => time(), // always renew'
             'brute_force_time' => 1,  // html_form_start_time - start_time <= brute_force_time = ban!
-            'banishment_expires' => 10, // segundos de banimento
+            'banishment_expires' => 60, // segundos de banimento
 
             /* * html form * */
 
@@ -196,16 +199,16 @@ class Guardian
                         if ($post_vals != "0") {
                             $this->set_flash("error #$post_vals");
                         }
-                        if ($this->pwd_page_is('logged_page')) {
-                            $this->redirect($this->get_session('main_page'));
-                        } else {
+                        if ($this->pwd_page_is('logged_page')) { 
+                            $this->redirect($this->get_session('logout_page'));
+                        } else { 
                             $this->require_page($this->get_session('login_page'));
                         }
                         break;
                 }
             }
         } else {
-            if (!$this->pwd_page_is('logged_page')) {
+            if (!$this->pwd_page_is('logged_page')) { 
                 $this->redirect($this->get_session('logged_page'));
             }
         }
@@ -717,23 +720,31 @@ class Guardian
     // ******* FILE METHODS *******
     protected function pwd_page()
     {
-        $b1 = basename($_SERVER['REQUEST_URI']);
-        $b2 = basename($_SERVER['PHP_SELF']);
+        $b1 = $_SERVER['REQUEST_URI'];
+        $b2 = $_SERVER['PHP_SELF'];
         if ($b1 || $b2) {
             $b = ($b2) ? $b2 : $b1;
         } else {
             $b = '';
         }
-        return $b;
+        return ($b == '' ) ? '' : str_replace($this->get_session('host'), '', $b);
     }
     protected function pwd_page_is($name)
-    {
+    { 
         $pg = $this->get_session($name);
+        $pwd = $this->pwd_page();
+        return strstr($pwd, $pg);
+        //$c = strstr($pwd, $pg);
+        //$c = ( $c ) ? 'sim' : 'nao';
+        //exit('<b>pwd_page_is - test: check('.$pg.') x this ('.$pwd.') x '.$c.'</b>');
+        // desabilitado o bloco abaixo pois caso logged_page tenha mesmo nome de outra pagina, vai gerar erro
+        /*
         if (preg_match('/\//', $pg)) {
             $E = explode('/', $pg);
             $pg = end($E);
         }
-        return ($this->pwd_page() == $pg);
+        */
+        //return ($this->pwd_page() == $pg);
     }
     protected function require_page($page)
     {
@@ -757,7 +768,7 @@ class Guardian
     protected function format_path($path)
     {
         $example = 'path/to/file/';
-        if ($path != '') {
+        if ($path != '' && preg_match('/'.str_replace('/', '\/', $example).'/', $path)) {
             $path = str_replace($example, '', $path);
         }
         $this->set_debug($path, 'format_path');
