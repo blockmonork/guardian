@@ -1,8 +1,12 @@
 <?php
 // ------- Guardian implementation - put those lines in every page you want to monitor --------
-require('guardianMonitor.php');
-guardianMonitor();
-
+if ( isset($guardian) ){
+    $guardian->monitore();
+}else{
+    require('Guardian.php');
+    $guardian = new Core\Guardian();
+    $guardian->print_header()->monitore();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,9 +34,19 @@ guardianMonitor();
                     $name = preg_replace('/W/', '', trim(substr($_GET['name'], 0, 20)));
                     echo '<p>' . $name . '</p>';
                 }
+                include('test_page2.php');
                 ?>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div id="ajax_response"></div>
+                    </div>
+                </div>
+                <hr>
                 <p>
-                    <a href="index.php?logout=1">Logout</a>
+                    <a href="javascript:ajaxTest();" class="btn btn-primary">test ajax</a>
+                    &nbsp;
+                    <a href="index.php?logout=1" class="btn btn-outline-primary">Logout</a>
+                    
                 </p>
             </div>
         </div>
@@ -46,6 +60,20 @@ guardianMonitor();
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
     <!-- bootstrap -->
+
+    <script>
+        function ajaxTest() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("ajax_response").innerHTML = this.responseText;
+                }
+            };
+            xhttp.open("GET", "test_page2.php?ajax=1", true);
+            xhttp.send();
+            
+        }
+    </script>
 </body>
 
 </html>
