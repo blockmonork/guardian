@@ -97,9 +97,12 @@ class Guardian
             // se logged_page is array, paginas serao setadas em _logged_pages_
             'logged_page' => 'path/to/file/hello.php', // ou array('path/to/file/hello.php', 'path/to/file/page2.php')  
 
+
+            /* * internos * */
             // interno. pega paginas de logged_page se este eh array
             // usara methodo is_authenticated_page
             '_logged_pages_' => [],
+            '_setup_' => 0, // 0 = nao inicializado, 1 = inicializado
 
 
             /*  * arquivos * */
@@ -115,14 +118,14 @@ class Guardian
             'http_header_allow_subdomains' => 0,
             'http_header_cache_control' => 'public', // public | private ou string configurando
             'http_header_x_content_type_options' => 'nosniff', // 0 disable or string
-             //"X-Content-Type-Options: nosniff",
-             'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or string
-             //"X-Frame-Options: SAMEORIGIN",
-             'http_header_set_cookie' => 0, // 0 disable or string
-             //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
-             'http_header_content_security_policy' => 1, // 0 disable
-             //"Content-Security-Policy: $CSP_string",        
-             'http_header_x_xss_protection' => 1, // 0 disable, 1 enable(sanitize), 1; mode=block[otherOption]
+            //"X-Content-Type-Options: nosniff",
+            'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or string
+            //"X-Frame-Options: SAMEORIGIN",
+            'http_header_set_cookie' => 0, // 0 disable or string
+            //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
+            'http_header_content_security_policy' => 1, // 0 disable
+            //"Content-Security-Policy: $CSP_string",        
+            'http_header_x_xss_protection' => 1, // 0 disable, 1 enable(sanitize), 1; mode=block[otherOption]
 
 
             /* * POSTS & GETS * */
@@ -139,6 +142,9 @@ class Guardian
     {
         foreach ($this->Defaults as $key => $value) {
             switch ($key) {
+                case '_setup_':
+                    $this->Defaults[$key] = 1;
+                    break;
                 case '_logged_pages_':
                     continue; // setado abaixo
                     break;
@@ -174,6 +180,7 @@ class Guardian
                     break;
             }
         }
+        $this->set_session('_setup_', 1);
         return $this;
     }
     public function print_header()
@@ -206,9 +213,7 @@ class Guardian
         $this->set_session('max_fail', $this->Definitions['max_fail']);
         $this->set_session('count_fail', 0);
         $this->init_pages();
-        $this->set_session('log', $this->format_path($this->Definitions['log']));
-        $this->set_session('ban_file', $this->format_path($this->Definitions['ban_file']));
-        $this->set_session('http_header_response_code', $this->Definitions['http_header_response_code']);
+        $this->init_files();
         $this->init_posts();
         $this->init_gets();
         // */
@@ -582,6 +587,7 @@ class Guardian
                 $this->Definitions[$key] = $this->get_session($key);
             }
         }
+        return $this;
     }
     protected function init_headers()
     {
@@ -600,6 +606,7 @@ class Guardian
         foreach ($keys as $key) {
             $this->set_session($key, $this->Definitions[$key], true);
         }
+        return $this;
     }
     protected function init_temporizadores()
     {
@@ -613,6 +620,7 @@ class Guardian
             $this->set_debug("$key = " . $this->Definitions[$key], 'init_temporizadores');
             $this->set_session($key, $this->Definitions[$key]);
         }
+        return $this;
     }
     protected function init_html_form_validators()
     {
@@ -673,6 +681,7 @@ class Guardian
             ->set_session('_pass_', $P)
             ->set_session('_token_', $Token)
             ->set_session('_credentials_method_', $CM);
+        return $this;
     }
     protected function init_pages()
     {
@@ -708,6 +717,18 @@ class Guardian
             $this->set_session('_logged_pages_', []);
             $this->set_debug('_logged_pages_ is empty', 'init_pages');
         }
+        return $this;
+    }
+    protected function init_files()
+    {
+        $keys = [
+            'log',
+            'ban_file',
+        ];
+        foreach ($keys as $key) {
+            $this->set_session($key, $this->format_path($this->Definitions[$key]));
+        }
+        return $this;
     }
     protected function init_posts()
     {
@@ -729,6 +750,7 @@ class Guardian
             $this->Definitions['posts'] = [];
         }
         $this->set_session('posts', $this->Definitions['posts'], true);
+        return $this;
     }
     protected function init_gets()
     {
@@ -741,6 +763,7 @@ class Guardian
             $this->Definitions['gets'] = [];
         }
         $this->set_session('gets', $this->Definitions['gets'], true);
+        return $this;
     }
     protected function is_valid_method($method = 'POST')
     {
@@ -933,21 +956,21 @@ class Guardian
         $b_pr = $this->get_session('http_header_x_xss_protection');
 
 
-        $content_type_options = ( $b_co == '0' )
+        $content_type_options = ($b_co == '0')
             ? ''
             : $x_cto;
 
-        $x_frame_options = ( $b_fo == '0' )
+        $x_frame_options = ($b_fo == '0')
             ? ''
             : $x_fo;
 
-        $set_cookie =( $b_sc == '0' )
+        $set_cookie = ($b_sc == '0')
             ? ''
             : $x_sc;
 
-        $content_security_policy = ( $b_sp ) ? $x_sp : '';
+        $content_security_policy = ($b_sp) ? $x_sp : '';
 
-        $xss_protection = ( $b_pr == '0' ) ? '' : sprintf($x_pr, $b_pr);
+        $xss_protection = ($b_pr == '0') ? '' : sprintf($x_pr, $b_pr);
 
 
         /*
@@ -1263,7 +1286,7 @@ class Guardian
     }
     protected function destroy_session()
     {
-        foreach ( $_SESSION as $k => $v ){
+        foreach ($_SESSION as $k => $v) {
             unset($_SESSION[$k]);
         }
         session_destroy();
