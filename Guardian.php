@@ -1113,7 +1113,7 @@ class Guardian
     {
         $this->set_debug($page, 'redirect');
         if (file_exists($page)) {
-            echo "<script>window.location.href = '$page';</script>";
+            echo "<script>window.location='$page';</script>";
         } else {
             $this->error('redirect: file "' . $page . '" not found');
         }
