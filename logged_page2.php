@@ -63,22 +63,6 @@ $files = [
                 } else {
                     echo '<i>no post</i>';
                     $teste = 'nome com <tag></tag> e \contra barra';
-                    function funzinha($txt)
-                    {
-                        $teste = trim($txt);
-                        $fr = [
-                            '<' => '&lt;',
-                            '>' => '&gt;',
-                            '\\' => '&bsol;',
-                            '"' => '&quot;',
-                            "'" => '&#039;',
-                        ];
-                        foreach ($fr as $f => $r) {
-                            $teste = str_replace($f, $r, $teste);
-                        }
-                        return $teste;
-                    }
-                    echo " resultado: " . funzinha($teste);
                 }
                 ?>
                 <hr>
