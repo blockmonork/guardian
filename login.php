@@ -114,15 +114,6 @@ $files = [
 
     <script>
         const _v_ = [4, 50, "<?php echo $inputUser?>", "<?php echo $inputPass?>", "<?php echo $formName?>"];
-        <?php
-        /* fica aqui por enquanto pra manter a ordem do array acima
-        var MiL = 4;
-        var MxL = 50;
-        var U = "echo $inputUser; ";
-        var P = "echo $inputPass; "; 
-        var F = "echo $formName;";
-        */
-        ?>
     </script>
     <script type="text/JavaScript" src="<?php echo $d . $files['jquery']; ?>"></script>
     <script type="text/JavaScript" src="<?php echo $d . $files['materialize_js']; ?>"></script>
