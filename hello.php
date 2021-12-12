@@ -1,12 +1,23 @@
 <?php
 // ------- Guardian implementation - put those lines in every page you want to monitor --------
 if ( isset($guardian) ){
+    // via require_page
     $guardian->monitore();
 }else{
-    require('Guardian.php');
+    // via redirect
+    require_once('Guardian.php');
     $guardian = new Core\Guardian();
-    $guardian->print_header()->monitore();
+    $guardian->monitore()->print_header();
 }
+// base_dir to include files
+$d = $guardian->get('base_dir') . 'assets/';
+$files = [
+    'bootstrap_css' => 'bs45.css', 
+    'jquery' => 'jq35.js', 
+    'popper' => 'pp.js', 
+    'bootstrap_js' => 'bs45.js', 
+];
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,7 +27,7 @@ if ( isset($guardian) ){
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hello! This is a logged page!</title>
     <!-- bootstrap -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="<?php echo $d . $files['bootstrap_css']; ?>" type="text/css">
     <!-- bootstrap -->
 </head>
 
@@ -28,6 +39,8 @@ if ( isset($guardian) ){
                 <p>This is a logged page!</p>
                 <p>
                     <a href="hello.php?name=test">just a test</a>
+                    &nbsp;
+                    <a href="logged_page2.php">go to page 2</a>
                 </p>
                 <?php
                 if (isset($_GET['name']) && !empty($_GET['name'])) {
@@ -56,9 +69,9 @@ if ( isset($guardian) ){
 
 
     <!-- bootstrap -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+    <script type="text/JavaScript" src="<?php echo $d . $files['jquery']; ?>"></script>
+    <script type="text/JavaScript" src="<?php echo $d . $files['popper']; ?>"></script>
+    <script type="text/JavaScript" src="<?php echo $d . $files['bootstrap_js']; ?>"></script>
     <!-- bootstrap -->
 
     <script>

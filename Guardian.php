@@ -2,6 +2,7 @@
 
 namespace Core;
 
+ob_start();
 session_start();
 
 class Guardian
@@ -14,17 +15,27 @@ class Guardian
 
     private $debug = false;
     private $debug_msg = [];
+    private $http_header = 200;
+
 
 
     public function __construct($debug = false, $refreshSession = false)
     {
         $this->debug = $debug;
-        if ( $refreshSession && $this->is_session_set('start_time')){
+        if ($refreshSession && $this->is_session_set('start_time')) {
             $this->destroy_session();
         }
 
         $this->always_refresh = [
-            'http_response_code',
+            'http_header_response_code',
+            /*'http_header_unsafe_inline',
+            'http_header_unsafe_eval',
+            'http_header_allow_subdomains',
+            'http_header_x_content_type_options',
+            'http_header_x_frame_options',
+            'http_header_set_cookie',
+            'http_header_content_security_policy',
+            'http_header_x_xss_protection',*/
             'html_form_start_time',
             'html_form_tokenvalue',
             'logged_in',
@@ -32,14 +43,24 @@ class Guardian
             'gets',
         ];
 
+        $this->http_header = 200;
+
+
         $this->Defaults = [
+
+            /* * propriedades dentro de _ (underline) sao privadas * */
+
+
+            /* * base_dir* */
+
+            'base_dir' => '', // caminho relativo para este script (usado para login "puxar" css, js, etc)
 
             /* * temporizadores * */
 
             'start_time' => time(),  // 1 per session'
             'html_form_start_time' => time(), // always renew'
             'brute_force_time' => 1,  // html_form_start_time - start_time <= brute_force_time = ban!
-            'banishment_expires' => 60, // segundos de banimento
+            'banishment_expires' => 90, // segundos de banimento
 
             /* * html form * */
 
@@ -52,13 +73,13 @@ class Guardian
             /* * validadores * */
 
             'host' => '__AUTO__', // $_SERVER['HTTP_HOST']
-            'user' => '', // getenv ou set hardcoded
-            'pass' => '', // getenv ou set hardcoded
+            '_user_' => '', // getenv ou set hardcoded
+            '_pass_' => '', // getenv ou set hardcoded
             // /etc/apache2/envvars must be edited to include the following line:
             // export GUARDIANUSER=your_user_name
             // export GUARDIANPASS=your_password
-            'token' => '', // sha1 1 per session
-            'credentials_method' => 'getenv', // getenv ou set hardcoded
+            '_token_' => '', // sha1 1 per session
+            '_credentials_method_' => 'getenv', // getenv ou set hardcoded
             'logged_in' => false, // true 1 per session
 
             /* * controle de tentativa de logins * */
@@ -72,7 +93,13 @@ class Guardian
             'logout_page' => 'path/to/file/index.php', // geralmente o mesmo valor de main_page 
             // (mas se logged_page estiver num nivel diferente de main_page, logout_page deve setar o caminho relativo)
             'logout_uri_name' => 'logout',
-            'logged_page' => 'path/to/file/hello.php',
+
+            // se logged_page is array, paginas serao setadas em _logged_pages_
+            'logged_page' => 'path/to/file/hello.php', // ou array('path/to/file/hello.php', 'path/to/file/page2.php')  
+
+            // interno. pega paginas de logged_page se este eh array
+            // usara methodo is_authenticated_page
+            '_logged_pages_' => [],
 
 
             /*  * arquivos * */
@@ -80,42 +107,100 @@ class Guardian
             'ban_file' => 'path/to/file/guardian_ban_file',
 
 
-            /* * html response code * */
-            'http_response_code' => 200,
+            /* * http headers * */
+            // 
+            'http_header_response_code' => 200,
+            'http_header_unsafe_inline' =>  1,
+            'http_header_unsafe_eval' => 1,
+            'http_header_allow_subdomains' => 0,
+            'http_header_cache_control' => 'public', // public | private ou string configurando
+            'http_header_x_content_type_options' => 'nosniff', // 0 disable or string
+             //"X-Content-Type-Options: nosniff",
+             'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or string
+             //"X-Frame-Options: SAMEORIGIN",
+             'http_header_set_cookie' => 0, // 0 disable or string
+             //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
+             'http_header_content_security_policy' => 1, // 0 disable
+             //"Content-Security-Policy: $CSP_string",        
+             'http_header_x_xss_protection' => 1, // 0 disable, 1 enable(sanitize), 1; mode=block[otherOption]
+
 
             /* * POSTS & GETS * */
             'posts' => [],
             'gets' => [],
+
+
         ];
     }
 
 
     // ******* USER METHODS *******
-    public function setup($array_user_definition = [])
+    public function setup($array_user_definitions = [])
     {
         foreach ($this->Defaults as $key => $value) {
-            if ($key != 'posts' && $key != 'gets') {
-                if (!isset($array_user_definition[$key])) {
-                    $this->Definitions[$key] = $value;
-                } else {
-                    $this->Definitions[$key] = $array_user_definition[$key];
-                }
-                $m = "$key = " . $this->Definitions[$key];
-                $this->set_debug($m, 'setup');
+            switch ($key) {
+                case '_logged_pages_':
+                    continue; // setado abaixo
+                    break;
+                case 'logged_page':
+                    $vals = (isset($array_user_definitions['logged_page']))
+                        ? $array_user_definitions['logged_page']
+                        : $value;
+                    $first = '';
+                    $others = [];
+                    if (is_array($vals)) {
+                        foreach ($vals as $val) {
+                            if ($first == '') {
+                                $first = $val;
+                            }
+                            array_push($others, $val);
+                        }
+                    }
+                    $this->Definitions['logged_page'] =  ($first == '') ? $vals : $first;
+                    $this->Definitions['_logged_pages_'] = $others;
+                    break;
+                case 'posts':
+                case 'gets':
+                    $this->Definitions[$key] = [];
+                    break;
+                default:
+                    if (!isset($array_user_definitions[$key])) {
+                        $this->Definitions[$key] = $value;
+                    } else {
+                        $this->Definitions[$key] = $array_user_definitions[$key];
+                    }
+                    $m = "$key = " . $this->Definitions[$key];
+                    $this->set_debug($m, 'setup');
+                    break;
             }
         }
         return $this;
     }
     public function print_header()
     {
-        $this->printHeader();
+        if (!headers_sent()) {
+            $this->printHeader();
+        }
         return $this;
+    }
+    public function end()
+    {
+        //session_write_close();
+        ob_end_flush();
     }
     public function start()
     {
         // inits begin...
         // /*
         $this->init_load();
+        $base_dir = $this->Definitions['base_dir'];
+        if ($base_dir != '') {
+            // if the last character is not a slash add
+            if ($base_dir[strlen($base_dir) - 1] != '/') $base_dir .= '/';
+        }
+        $this->Definitions['base_dir'] = $base_dir;
+        $this->set_session('base_dir', $base_dir);
+        $this->init_headers();
         $this->init_temporizadores();
         $this->init_html_form_validators();
         $this->set_session('max_fail', $this->Definitions['max_fail']);
@@ -123,33 +208,51 @@ class Guardian
         $this->init_pages();
         $this->set_session('log', $this->format_path($this->Definitions['log']));
         $this->set_session('ban_file', $this->format_path($this->Definitions['ban_file']));
-        $this->set_session('http_response_code', $this->Definitions['http_response_code']);
+        $this->set_session('http_header_response_code', $this->Definitions['http_header_response_code']);
         $this->init_posts();
         $this->init_gets();
         // */
 
         if ($this->debug) {
             $this->get_debug();
-            echo "<br>";
+            echo "<br><b>after start:</b><pre>";
             foreach ($this->Defaults as $key => $value) {
-                echo $key . ' = ' .  $this->get_session($key) . '<br>';
+                $val = $this->get_session($key);
+                $v = (is_array($val)) ? 'array: ' . implode(',', $val) : $val;
+                echo $key . ' = ' .  $v . '<br>';
             }
+            echo '</pre>';
         }
 
         return $this;
     }
-    public function monitore()
+    public function monitore($isMainPage = false)
     {
         $this->init_load();
-        $g = $this->get_session('logout_uri_name');
-        if (isset($_GET[$g])) {
+        $is_logged = (bool) $this->get_session('logged_in');
+
+        if (isset($_GET[$this->Definitions['logout_uri_name']])) {
             $this->logout();
         }
         // check ban
         if ($this->is_ban()) {
+            $this->http_header = 403;
             $this->error('Banned');
         }
-        if ((bool) $this->get_session('logged_in') === false) {
+        if (!$isMainPage) {
+            if (!$is_logged) {
+                $this->http_header = 401;
+                $this->error("access denied");
+            }
+            // usando paginas autenticadas?
+            $auth = ((is_array($this->Definitions['_logged_pages_'])) && count($this->Definitions['_logged_pages_']) > 0);
+            if ($auth && !$this->is_authenticated_page()) {
+                $this->http_header = 401;
+                $this->error('access denied.');
+            }
+            return $this;
+        }
+        if (!$is_logged) {
             // check post
             $post_vals = $this->__get_post();
             /*
@@ -174,42 +277,65 @@ class Guardian
                 */
                 switch ($success) {
                     case '1':
-                        $this->redirect($this->get_session('logged_page'));
+                        $this->http_header = 200;
+                        $this->redirect($this->Definitions['logged_page']);
                         break;
                     case '0':
-                        $this->set_flash("fail login " . $this->get_session('count_fail'));
-                        $this->require_page($this->get_session('login_page'));
+                        $this->http_header = 407;
+                        $this->set_flash("fail login " . $this->get_session('count_fail'))
+                            ->require_page($this->Definitions['login_page']);
                         break;
                     case 'ban_user':
-                        $this->ban_user();
-                        $this->error('banned.xTimes');
+                        $this->http_header = 401;
+                        $this->ban_user()
+                            ->error('banned.xTimes');
                         break;
                 }
             } else {
                 switch ($post_vals) {
                     case 'ban_user':
-                        $this->ban_user();
-                        $this->error('banned.bf'); // brute force
+                        $this->http_header = 401;
+                        $this->ban_user()
+                            ->error('banned.bf'); // brute force
                         break;
                     case 'login_fail':
-                        $this->set_flash('login failed');
-                        $this->require_page($this->get_session('login_page'));
+                        $this->http_header = 407;
+                        $this->set_flash('login failed')
+                            ->require_page($this->Definitions['login_page']);
                         break;
                     default:
                         if ($post_vals != "0") {
-                            $this->set_flash("error #$post_vals");
+                            /*
+                            BUG: 
+                            as vezes a sessao "trava" com nomes "perdidos" nos forms. analisando:
+                            */
+                            $ei = 0;
+                            if (!$this->is_session_set('_erro_interno_')) {
+                                $ei = 1;
+                                $this->set_session('_erro_interno_', $ei, true);
+                            } else {
+                                $ei = $this->get_session('_erro_interno_');
+                                $ei++;
+                                $this->set_session('_erro_interno_', $ei, true);
+                                if ($ei >= 2) $this->logout();
+                            }
+                            $this->http_header = 407;
+                            $this->set_flash("error #$post_vals . $ei");
                         }
-                        if ($this->pwd_page_is('logged_page')) { 
-                            $this->redirect($this->get_session('logout_page'));
-                        } else { 
-                            $this->require_page($this->get_session('login_page'));
+                        if ($this->pwd_page_is('logged_page')) {
+                            $this->http_header = 307;
+                            $this->redirect($this->Definitions['logout_page']);
+                        } else {
+                            $this->http_header = 200;
+                            $this->require_page($this->Definitions['login_page']);
                         }
                         break;
                 }
             }
         } else {
-            if (!$this->pwd_page_is('logged_page')) { 
-                $this->redirect($this->get_session('logged_page'));
+            if (!$this->pwd_page_is('logged_page')) {
+                $this->http_header = 200;
+                $this->redirect($this->Definitions['logged_page']);
             }
         }
 
@@ -217,25 +343,76 @@ class Guardian
     }
     public function get($key)
     {
-        return $this->get_session($key);
+        if ($key != '' && $key[0] != '_') {
+            return $this->get_session($key);
+        } else {
+            return null;
+        }
     }
-    public function get_post($clear = false)
+    public function get_post($varName, $clear = false)
     {
         $posts = $this->get_session('posts');
         // clear vals
         if ($clear) {
-            $this->set_session('posts', [], true);
+            $this->unset_session('posts');
         }
-        return $posts;
+        if (is_array($varName)) {
+            $r = [];
+            foreach ($varName as $k) {
+                $r[$k] = (isset($posts[$k])) ? $posts[$k] : false;
+            }
+            return $r;
+        }
+        return (isset($posts[$varName])) ? $posts[$varName] : false;
     }
-    public function get_get($clear = false)
+    public function get_get($varName, $clear = false)
     {
         $gets = $this->get_session('gets');
         // clear vals
         if ($clear) {
-            $this->set_session('gets', [], true);
+            $this->unset_session('gets');
         }
-        return $gets;
+        if (is_array($varName)) {
+            $r = [];
+            foreach ($varName as $k) {
+                $r[$k] = (isset($gets[$k])) ? $gets[$k] : false;
+            }
+            return $r;
+        }
+        return (isset($gets[$varName])) ? $gets[$varName] : false;
+    }
+    public function sanitize_as($value, $as = 'text')
+    {
+        //if (empty($value) || strlen($value) == 0) return $value;
+        //https://theasciicode.com.ar/ascii-printable-characters/backslash-reverse-slash-ascii-code-92.html
+        $Map = [
+            '<' => '&lt;',
+            '>' => '&gt;',
+            '\\' => '&bsol;',
+            '"' => '&quot;',
+            "'" => '&#039;',
+        ];
+        $as = strtoupper(substr($as, 0, 3));
+        switch ($as) {
+            case 'TEX':
+            case 'STR':
+                $txt = trim($value);
+                foreach ($Map as $f => $r) {
+                    $txt = str_replace($f, $r, $txt);
+                }
+                return $txt;
+                break;
+            case 'INT':
+            case 'NUM':
+                return preg_replace('/[^0-9]/', '', $value);
+                break;
+            case 'DAT':
+                return preg_replace('/[^0-9\/\.\-]/', '', $value);
+                break;
+            default:
+                return $value;
+                break;
+        }
     }
     public function get_html_form_infos()
     {
@@ -266,7 +443,7 @@ class Guardian
                 $pg = $this->get_session('login_page');
                 if (!file_exists($pg)) {
                     $this->destroy_session();
-                    $this->set_session('http_response_code', 404);
+                    $this->http_header = 404;
                     $this->error('logout pages not found');
                 }
             }
@@ -280,7 +457,7 @@ class Guardian
     // ******* HTML FORM METHODS *******
     private function reset_form_values()
     {
-        $this->Definitions['html_form_tokenvalue'] = $this->Definitions['token'] = $this->encode_as($this->get_random_string(32));
+        $this->Definitions['html_form_tokenvalue'] = $this->Definitions['_token_'] = $this->encode_as($this->get_random_string(32));
         $this->Definitions['html_form_start_time'] = time();
         $resets = [
             'html_form_username',
@@ -298,7 +475,7 @@ class Guardian
             ->set_session('html_form_formname', $this->Definitions['html_form_formname'], true)
             ->set_session('html_form_tokenname', $this->Definitions['html_form_tokenname'], true)
             ->set_session('html_form_start_time', $this->Definitions['html_form_start_time'], true)
-            ->set_session('token', $this->Definitions['token'], true)
+            ->set_session('_token_', $this->Definitions['_token_'], true)
             ->set_session('logged_in', false, true);
     }
     private function __get_post()
@@ -363,16 +540,19 @@ class Guardian
             $username = $post_vals['html_form_username'];
             $password = $post_vals['html_form_password'];
             $tokenvalue = $post_vals['html_form_tokenvalue'];
-            $token = $this->get_session('token');
-            $user = $this->get_session('user');
-            $pass = $this->get_session('pass');
+            $token = $this->get_session('_token_');
+            $user = $this->get_session('_user_');
+            $pass = $this->get_session('_pass_');
+
             if ($token == $tokenvalue && $user == $username && $pass == $password) {
 
-                $this->set_debug("sessToken($token) x postToken($tokenvalue)", 'is_success_login');
-                $this->set_debug("sessUser($user) x postUser($username)", 'is_success_login');
-                $this->set_debug("sessPass($pass) x postPass($password)", 'is_success_login');
-
                 $this->set_session('logged_in', true);
+                // unset posts
+                foreach ($_POST as $key => $val) {
+                    unset($_POST[$key]);
+                }
+                // block session
+                session_write_close();
                 return "1";
             } else {
                 $this->reset_form_values();
@@ -401,6 +581,24 @@ class Guardian
             foreach ($this->Defaults as $key => $value) {
                 $this->Definitions[$key] = $this->get_session($key);
             }
+        }
+    }
+    protected function init_headers()
+    {
+        $keys = [
+            'http_header_response_code',
+            'http_header_unsafe_inline',
+            'http_header_unsafe_eval',
+            'http_header_allow_subdomains',
+            'http_header_cache_control',
+            'http_header_x_content_type_options',
+            'http_header_x_frame_options',
+            'http_header_set_cookie',
+            'http_header_content_security_policy',
+            'http_header_x_xss_protection',
+        ];
+        foreach ($keys as $key) {
+            $this->set_session($key, $this->Definitions[$key], true);
         }
     }
     protected function init_temporizadores()
@@ -432,10 +630,10 @@ class Guardian
         'html_form_formname' => '__AUTO__', // idem
         'html_form_tokenname' => '__AUTO__', // idem
         'html_form_tokenvalue' => '__AUTO__', // sha1 always renew
-        'user' => '', // getenv ou set hardcoded
-        'pass' => '', // getenv ou set hardcoded
-        'token' => '', // sha1 1 per session
-        'credentials_method' => 'getenv', // getenv ou set hardcoded
+        '_user_' => '', // getenv ou set hardcoded
+        '_pass_' => '', // getenv ou set hardcoded
+        '_token_' => '', // sha1 1 per session
+        '_credentials_method_' => 'getenv', // getenv ou set hardcoded
         */
         foreach ($keys as $key) {
             $x = $this->Definitions[$key];
@@ -448,13 +646,13 @@ class Guardian
             $this->set_debug("$key = " . $x, 'init_html_form_validators');
             $this->set_session($key, $x);
         }
-        $CM = strtoupper($this->Definitions['credentials_method']);
+        $CM = strtoupper($this->Definitions['_credentials_method_']);
         if ($CM == 'G' || $CM == 'GETENV') {
             $U = getenv('GUARDIANUSER');
             $P = getenv('GUARDIANPASS');
         } else {
-            $U = $this->Definitions['user'];
-            $P = $this->Definitions['pass'];
+            $U = $this->Definitions['_user_'];
+            $P = $this->Definitions['_pass_'];
         }
         if (empty($U) || empty($P)) {
             $this->error('user or pass empty');
@@ -471,10 +669,10 @@ class Guardian
         $this->set_debug("credentials_method($CM)", 'init_html_form_validators');
 
         $this->set_session('host', $h)
-            ->set_session('user', $U)
-            ->set_session('pass', $P)
-            ->set_session('token', $Token)
-            ->set_session('credentials_method', $CM);
+            ->set_session('_user_', $U)
+            ->set_session('_pass_', $P)
+            ->set_session('_token_', $Token)
+            ->set_session('_credentials_method_', $CM);
     }
     protected function init_pages()
     {
@@ -487,17 +685,28 @@ class Guardian
             'logged_page',
         ];
         foreach ($keys as $key) {
-            if ($key != 'login_page_title' && $key != 'logout_uri_name') {
-                $page = $this->format_path($this->Definitions[$key]);
-                $this->set_debug("$key [$page]", 'init_pages');
-                if (file_exists($page)) {
-                    $this->set_session($key, $page);
-                } else {
-                    $this->error("Page $key [$page] not found");
-                }
-            } else {
-                $this->set_session($key, $this->Definitions[$key]);
+            switch ($key) {
+                case 'login_page_title':
+                case 'logout_uri_name':
+                    $this->set_session($key, $this->Definitions[$key]);
+                    break;
+                default:
+                    $page = $this->format_path($this->Definitions[$key]);
+                    $this->set_debug("$key [$page]", 'init_pages');
+                    if (file_exists($page)) {
+                        $this->set_session($key, $page);
+                    } else {
+                        $this->error("Page $key [$page] not found");
+                    }
+                    break;
             }
+        }
+        if (count($this->Definitions['_logged_pages_']) > 0) {
+            $this->set_session('_logged_pages_', $this->Definitions['_logged_pages_']);
+            $this->set_debug('_logged_pages_ set array', 'init_pages');
+        } else {
+            $this->set_session('_logged_pages_', []);
+            $this->set_debug('_logged_pages_ is empty', 'init_pages');
         }
     }
     protected function init_posts()
@@ -576,6 +785,7 @@ class Guardian
     }
     protected function printHeader()
     {
+
         if ($this->debug) {
             ini_set('display_errors', 1);
             ini_set('display_startup_errors', 1);
@@ -609,20 +819,75 @@ class Guardian
 
         */
 
-        $allowedDomains = [
-            '*.googleapis.com',
-            '*.gstatic.com',
-            '*.cloudflare.com',
-            '*.jquery.com',
-            '*.jsdelivr.net',
-            '*.bootstrapcdn.com',
-        ];
+        /*
+        FIREFOX ISSUES  
+        Content Security Policy: Não foi possível processar a diretiva desconhecida “script-src-elem”
+        https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/worker-src
+        */
+
+        $host = $this->get_session('host');
+        $b_unsafe_inline = (bool) $this->get_session('http_header_unsafe_inline');
+        $b_unsafe_eval = (bool) $this->get_session('http_header_unsafe_eval');
+        $b_allow_sub_domains = (bool) $this->get_session('http_header_allow_subdomains');
+
+
+        $unsafe_inline = "'unsafe-inline'";
+        $unsafe_eval = "'unsafe-eval'";
+        $sub_domains = '%s';
+
+        if (!$b_unsafe_inline) {
+            $unsafe_inline = '';
+        }
+        if (!$b_unsafe_eval) {
+            $unsafe_eval = '';
+        }
+        if (!$b_allow_sub_domains) {
+            $sub_domains = $host;
+        }
+
+
+
+        $is_FF = (strstr($_SERVER['HTTP_USER_AGENT'], 'Firefox'));
+
+        $default_src = "default-src 'self' $unsafe_inline $unsafe_eval $sub_domains;";
+
+        $img_src = "img-src 'self';"; //"img-src 'self' 'unsafe-eval';"; is this unsafe?
+
+        $child_src = "child-src 'self';";
+
+        $script_src = "script-src 'self' $unsafe_inline $unsafe_eval;";
+
+        $script_src_elem = "script-src-elem 'self' $unsafe_inline $unsafe_eval $sub_domains;";
+
+        if ($is_FF) {
+            $default_src = "default-src 'self' $unsafe_inline $unsafe_eval $sub_domains;";
+            $child_src = "child-src 'self' $unsafe_inline $unsafe_eval $sub_domains;";
+            $script_src_elem = "worker-src 'self' $unsafe_inline $unsafe_eval $sub_domains;";
+            $script_src = "script-src 'self' $unsafe_inline $unsafe_eval $sub_domains;";
+        }
+
+
+
+        if ($b_allow_sub_domains) {
+            $allowedDomains = [
+                $host,
+                '*.googleapis.com',
+                '*.gstatic.com',
+                '*.cloudflare.com',
+                '*.jquery.com',
+                '*.jsdelivr.net',
+                '*.bootstrapcdn.com',
+            ];
+        } else {
+            $allowedDomains = [$host];
+        }
+
         $CSP = [
-            "default-src 'self' 'unsafe-inline' 'unsafe-eval' %s;",
-            "img-src 'self' 'unsafe-eval';",
-            "child-src 'self';",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
-            "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' %s;"
+            $default_src,
+            $img_src,
+            $child_src,
+            $script_src,
+            $script_src_elem,
         ];
         $CSP_string = '';
         $allowed = '';
@@ -636,16 +901,86 @@ class Guardian
                 $CSP_string .= $_csp . ' ';
             }
         }
+
+        //https://stackoverflow.com/questions/18008135/is-serverrequest-scheme-reliable
+        $sts = '';
+        if (isset($_SERVER['REQUEST_SCHEME'])) {
+            if (strtoupper($_SERVER['REQUEST_SCHEME']) == 'HTTPS') {
+                $sts = "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
+            }
+        }
+
+
+
+        $cache = $this->get_session('http_header_cache_control');
+        $cache_control = "Cache-Control: public"; //"Cache-Control: no-store, no-cache, must-revalidate";
+        if (!is_null($cache)) {
+            $cache_control = "Cache-Control: $cache";
+        }
+
+        //https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Headers/X-XSS-Protection
+
+        $x_pr = "X-XSS-Protection: %s"; // 1 or "X-XSS-Protection: 1; mode=block";
+        $x_cto = "X-Content-Type-Options: nosniff";
+        $x_fo = "X-Frame-Options: SAMEORIGIN";
+        $x_sc = "Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/";
+        $x_sp = "Content-Security-Policy: $CSP_string";
+
+        $b_co = $this->get_session('http_header_x_content_type_options');
+        $b_fo = $this->get_session('http_header_x_frame_options');
+        $b_sc = $this->get_session('http_header_set_cookie');
+        $b_sp = (bool) $this->get_session('http_header_content_security_policy');
+        $b_pr = $this->get_session('http_header_x_xss_protection');
+
+
+        $content_type_options = ( $b_co == '0' )
+            ? ''
+            : $x_cto;
+
+        $x_frame_options = ( $b_fo == '0' )
+            ? ''
+            : $x_fo;
+
+        $set_cookie =( $b_sc == '0' )
+            ? ''
+            : $x_sc;
+
+        $content_security_policy = ( $b_sp ) ? $x_sp : '';
+
+        $xss_protection = ( $b_pr == '0' ) ? '' : sprintf($x_pr, $b_pr);
+
+
+        /*
+        'http_header_x_content_type_options' => 'nosniff', // 0 disable or string
+        //"X-Content-Type-Options: nosniff",
+
+        'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or string
+        //"X-Frame-Options: SAMEORIGIN",
+
+        'http_header_set_cookie' => 0, // 0 disable or string
+        //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
+
+        'http_header_content_security_policy' => 1, // 0 disable
+        
+        'http_header_x_xss_protection' => 1 // 0 disable, 1 enable(sanitize), 1; mode=block[otherOption]
+        */
+
+
+        //"X-Content-Type-Options: nosniff",
+        //"X-Frame-Options: SAMEORIGIN",
+        //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
+        //"Content-Security-Policy: $CSP_string",        
         $infos = [
             "Content-Type: text/html; charset=UTF-8",
-            "X-Frame-Options: SAMEORIGIN",
-            "X-Content-Type-Options: nosniff",
-            "Set-Cookie: xyz=abc; SameSite=Strict; path=/",
-            "Content-Security-Policy: $CSP_string",
-            "X-XSS-Protection: 1; mode=block",
-            "Cache-Control: no-store, no-cache, must-revalidate",
+            $cache_control,
+            $xss_protection,
+            $sts,
+            $content_type_options,
+            $x_frame_options,
+            $set_cookie,
+            $content_security_policy,
+
             /*"Content-Security-Policy-Report-Only: policy",*/
-            "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
         ];
 
         // http_response_codes
@@ -708,16 +1043,46 @@ class Guardian
             503 => 'Service Unavailable',
             504 => 'Gateway Timeout',
         ];
-        $http = (!is_null($this->get_session('http_response_code'))) ? $this->get_session('http_response_code') : 200;
+        $http = ($this->http_header != '')
+            ? $this->http_header
+            : ((!is_null($this->get_session('http_header_response_code'))) ? $this->get_session('http_header_response_code') : 501);
+
+        header('HTTP / 1.1 ' . $http . ' ' . $codes[$http]);
         foreach ($infos as $info) {
-            header('HTTP / 1.1 ' . $http . ' ' . $codes[$http]);
             header($info);
         }
+        /*
+        //https://stackoverflow.com/questions/1773386/how-to-suppress-remove-php-session-cookie
+        header_remove('Set-Cookie');
+        // no cookies at all!
+        //https://stackoverflow.com/questions/686155/remove-a-cookie
+        foreach ( $_COOKIE as $key => $val ){
+            if ( isset($_COOKIE[$key])){
+                unset($_COOKIE[$key]);
+                setcookie($key, null, -1, '/'); 
+                
+            }
+        }
+        */
         return $this;
     }
 
 
     // ******* FILE METHODS *******
+    protected function is_authenticated_page()
+    {
+        $pg = $this->pwd_page();
+        $pages = $this->get_session('_logged_pages_');
+        if (!is_array($pages) || count($pages) == 0) {
+            return false;
+        }
+        foreach ($pages as $page) {
+            if (strstr($pg, $page)) {
+                return true;
+            }
+        }
+        return false;
+    }
     protected function pwd_page()
     {
         $b1 = $_SERVER['REQUEST_URI'];
@@ -727,24 +1092,13 @@ class Guardian
         } else {
             $b = '';
         }
-        return ($b == '' ) ? '' : str_replace($this->get_session('host'), '', $b);
+        return ($b == '') ? '' : str_replace($this->get_session('host'), '', $b);
     }
     protected function pwd_page_is($name)
-    { 
-        $pg = $this->get_session($name);
+    {
         $pwd = $this->pwd_page();
+        $pg = $this->get_session($name);
         return strstr($pwd, $pg);
-        //$c = strstr($pwd, $pg);
-        //$c = ( $c ) ? 'sim' : 'nao';
-        //exit('<b>pwd_page_is - test: check('.$pg.') x this ('.$pwd.') x '.$c.'</b>');
-        // desabilitado o bloco abaixo pois caso logged_page tenha mesmo nome de outra pagina, vai gerar erro
-        /*
-        if (preg_match('/\//', $pg)) {
-            $E = explode('/', $pg);
-            $pg = end($E);
-        }
-        */
-        //return ($this->pwd_page() == $pg);
     }
     protected function require_page($page)
     {
@@ -768,7 +1122,7 @@ class Guardian
     protected function format_path($path)
     {
         $example = 'path/to/file/';
-        if ($path != '' && preg_match('/'.str_replace('/', '\/', $example).'/', $path)) {
+        if ($path != '' && preg_match('/' . str_replace('/', '\/', $example) . '/', $path)) {
             $path = str_replace($example, '', $path);
         }
         $this->set_debug($path, 'format_path');
@@ -821,10 +1175,10 @@ class Guardian
         }
         return false;
     }
-    protected function f_set($file, $content)
+    protected function f_set($file, $content, $mode = 'w')
     {
         $file = $this->format_path($file);
-        $fp = fopen($file, 'w');
+        $fp = fopen($file, $mode);
         fwrite($fp, $content);
         fclose($fp);
         return true;
@@ -869,6 +1223,7 @@ class Guardian
             $banneds[$ban_info['ip']] = $ban_info['expires'];
             $this->set_ban($banneds);
         }
+        return $this;
     }
 
 
@@ -908,6 +1263,9 @@ class Guardian
     }
     protected function destroy_session()
     {
+        foreach ( $_SESSION as $k => $v ){
+            unset($_SESSION[$k]);
+        }
         session_destroy();
         return $this;
     }
@@ -926,18 +1284,22 @@ class Guardian
         $msg = implode('<br>', $this->debug_msg);
         $msg_log = implode("\n", $this->debug_msg);
         $this->set_log($msg_log);
-        echo "<pre>$msg</pre>";
+        echo "<b>get_debug()::debug_msg is:</b><pre>$msg</pre>";
     }
 
     // ******* MESSAGE METHODS *******
     private function error($msg)
     {
+        if (!headers_sent()) {
+            $this->printHeader();
+        }
         echo ($msg);
         exit;
     }
     private function set_flash($msg)
     {
         $this->set_session('flash', $msg, true);
+        return $this;
     }
     private function get_flash()
     {

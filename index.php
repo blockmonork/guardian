@@ -1,22 +1,19 @@
 <?php
 // @session_destroy(); exit("destroyed");
 
-//foreach ( $_SERVER as $key => $val ){ echo "$key: $val<br>"; }
+//foreach ( $_SERVER as $key => $val ){ echo "$key: $val<br>"; } exit;
 
 use Core\Guardian;
 
-require ('Guardian.php');
+require_once('Guardian.php');
 
 $debug = false;
 $refreshSession = false;
 
 $guardian = new Guardian($debug, $refreshSession);
 
-$guardian->setup(
-    [
-        'brute_force_time' => 60,
-        'banishment_expires' => 90,
-    ]
-)->print_header()->start()->monitore();
+$guardian->setup([
+    'logged_page' => ['hello.php', 'logged_page2.php'],
+])->start()->monitore(true)->print_header()->end();
 
 // and its done!
