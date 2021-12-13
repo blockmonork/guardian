@@ -1,7 +1,6 @@
 <?php
 // @session_destroy(); exit("destroyed");
-
-//foreach ( $_SERVER as $key => $val ){ echo "$key: $val<br>"; } exit;
+// foreach ( $_SERVER as $key => $val ){ echo "$key: $val<br>"; } 
 
 use Core\Guardian;
 

@@ -454,6 +454,8 @@ class Guardian
             }
         }
         $this->destroy_session();
+        $this->http_header = 307;
+        $this->set_session('http_header_set_cookie', 1, true);
         $this->redirect($pg);
     }
 
@@ -497,7 +499,7 @@ class Guardian
         string ban_user
         */
         if (!$this->is_valid_method('POST')) return '0';
-        if ($_SERVER['REQUEST_METHOD'] === 'POST'  && isset($_POST)) {
+        if ($this->server('REQUEST_METHOD') === 'POST'  && isset($_POST)) {
             $post_names = [
                 'html_form_username' => $this->get_session('html_form_username'),
                 'html_form_password' => $this->get_session('html_form_password'),
@@ -519,8 +521,8 @@ class Guardian
                 }
             }
             // check brute force
-            $request_time = (isset($_SERVER['REQUEST_TIME']))
-                ? $_SERVER['REQUEST_TIME']
+            $request_time = (!is_null($this->server('REQUEST_TIME', false)))
+                ? $this->server('REQUEST_TIME')
                 : $post_names['html_form_start_time'];
 
             $start_time = $this->get_session('start_time');
@@ -586,6 +588,11 @@ class Guardian
             foreach ($this->Defaults as $key => $value) {
                 $this->Definitions[$key] = $this->get_session($key);
             }
+        } else {
+            // minimal setup
+            $this->Definitions['logout_uri_name'] = $this->Defaults['logout_uri_name'];
+            $this->Definitions['ban_file'] = $this->get_pwd_file();
+            $this->set_session('ban_file', $this->Definitions['ban_file'], true);
         }
         return $this;
     }
@@ -668,7 +675,7 @@ class Guardian
             $U = $this->encode_as($U);
             $P = $this->encode_as($P);
         }
-        $h = ($this->Definitions['host'] == '__AUTO__') ? $_SERVER['HTTP_HOST'] : $this->Definitions['host'];
+        $h = ($this->Definitions['host'] == '__AUTO__') ? $this->server('HTTP_HOST') : $this->Definitions['host'];
         $this->Definitions['host'] = $h;
         $this->set_debug("host = $h", 'init_html_form_validators');
         $this->set_debug("user($U)", 'init_html_form_validators');
@@ -733,7 +740,7 @@ class Guardian
     protected function init_posts()
     {
         if (!$this->is_valid_method('POST')) return;
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST)) {
+        if ($this->server('REQUEST_METHOD') === 'POST' && isset($_POST)) {
             $x = [
                 $this->get_session('html_form_username'),
                 $this->get_session('html_form_password'),
@@ -755,7 +762,7 @@ class Guardian
     protected function init_gets()
     {
         if (!$this->is_valid_method('GET')) return;
-        if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET)) {
+        if ($this->server('REQUEST_METHOD') === 'GET' && isset($_GET)) {
             foreach ($_GET as $key => $value) {
                 $this->Definitions['gets'][$key] = $value;
             }
@@ -767,14 +774,14 @@ class Guardian
     }
     protected function is_valid_method($method = 'POST')
     {
-        $host = $_SERVER['HTTP_HOST'];
-        $cdr = $_SERVER['CONTEXT_DOCUMENT_ROOT'];
-        $sn = $_SERVER['SCRIPT_NAME'];
-        $sfn = $_SERVER['SCRIPT_FILENAME'];
+        $host = $this->server('HTTP_HOST');
+        $cdr = $this->server('CONTEXT_DOCUMENT_ROOT');
+        $sn = $this->server('SCRIPT_NAME');
+        $sfn = $this->server('SCRIPT_FILENAME');
         if ($host != $this->get_session('host')) return false;
         $x = str_replace($cdr, '', $sfn);
         if ($x != $sn) return false;
-        if (strtoupper($method) != $_SERVER['REQUEST_METHOD']) return false;
+        if (strtoupper($method) != $this->server('REQUEST_METHOD')) return false;
         return true;
     }
 
@@ -870,7 +877,7 @@ class Guardian
 
 
 
-        $is_FF = (strstr($_SERVER['HTTP_USER_AGENT'], 'Firefox'));
+        $is_FF = (strstr($this->server('HTTP_USER_AGENT'), 'Firefox'));
 
         $default_src = "default-src 'self' $unsafe_inline $unsafe_eval $sub_domains;";
 
@@ -927,8 +934,8 @@ class Guardian
 
         //https://stackoverflow.com/questions/18008135/is-serverrequest-scheme-reliable
         $sts = '';
-        if (isset($_SERVER['REQUEST_SCHEME'])) {
-            if (strtoupper($_SERVER['REQUEST_SCHEME']) == 'HTTPS') {
+        if (!is_null($this->server('REQUEST_SCHEME', false))) {
+            if (strtoupper($this->server('REQUEST_SCHEME')) == 'HTTPS') {
                 $sts = "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
             }
         }
@@ -1106,10 +1113,14 @@ class Guardian
         }
         return false;
     }
+    protected function get_pwd_file()
+    {
+        return dirname($this->server('PHP_SELF'));
+    }
     protected function pwd_page()
     {
-        $b1 = $_SERVER['REQUEST_URI'];
-        $b2 = $_SERVER['PHP_SELF'];
+        $b1 = $this->server('REQUEST_URI', false);
+        $b2 = $this->server('PHP_SELF');
         if ($b1 || $b2) {
             $b = ($b2) ? $b2 : $b1;
         } else {
@@ -1211,7 +1222,7 @@ class Guardian
     // ******* BAN METHODS *******
     protected function get_ban_info_user()
     {
-        $ip = (isset($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '00';
+        $ip = (!is_null($this->server('REMOTE_ADDR', false))) ? $this->server('REMOTE_ADDR') : '00';
         $expired = intval($this->get_session('banishment_expires')) + time();
         return [
             'ip' => $ip,
@@ -1292,6 +1303,17 @@ class Guardian
         session_destroy();
         return $this;
     }
+    protected function server($key, $die = true)
+    {
+        $key = strtoupper(trim($key));
+        if (isset($_SERVER[$key])) {
+            return $_SERVER[$key];
+        }
+        if ( $die ){
+            exit("<!-- Error $key! -->");
+        }
+        return null;
+    }
 
     // ******* DEBUG METHODS *******
     private function set_debug($msg, $from_function = '')
@@ -1316,8 +1338,7 @@ class Guardian
         if (!headers_sent()) {
             $this->printHeader();
         }
-        echo ($msg);
-        exit;
+        exit($msg);
     }
     private function set_flash($msg)
     {
