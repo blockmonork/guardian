@@ -17,6 +17,8 @@ class Guardian
     private $debug_msg = [];
     private $http_header = 200;
 
+    public $vs = '2021.12.13';
+
 
 
     public function __construct($debug = false, $refreshSession = false)
@@ -28,17 +30,9 @@ class Guardian
 
         $this->always_refresh = [
             'http_header_response_code',
-            /*'http_header_unsafe_inline',
-            'http_header_unsafe_eval',
-            'http_header_allow_subdomains',
-            'http_header_x_content_type_options',
-            'http_header_x_frame_options',
-            'http_header_set_cookie',
-            'http_header_content_security_policy',
-            'http_header_x_xss_protection',*/
             'html_form_start_time',
             'html_form_tokenvalue',
-            'logged_in',
+            'logado',
             'posts',
             'gets',
         ];
@@ -49,6 +43,9 @@ class Guardian
         $this->Defaults = [
 
             /* * propriedades dentro de _ (underline) sao privadas * */
+
+            'guardian_base_file' => 'http://localhost/Git_projects/guardian/guardian/index.php', // caminho absoluto para guardian/index.php
+            // ALTERAR SOMENTE SE SAIR DO AMBIENTE DE DESENVOLVIMENTO    
 
 
             /* * base_dir* */
@@ -80,7 +77,7 @@ class Guardian
             // export GUARDIANPASS=your_password
             '_token_' => '', // sha1 1 per session
             '_credentials_method_' => 'getenv', // getenv ou set hardcoded
-            'logged_in' => false, // true 1 per session
+            'logado' => false, // true 1 per session
 
             /* * controle de tentativa de logins * */
             'max_fail' => 3,
@@ -103,11 +100,14 @@ class Guardian
             // usara methodo is_authenticated_page
             '_logged_pages_' => [],
             '_setup_' => 0, // 0 = nao inicializado, 1 = inicializado
+            '_auto_redirect_times' => 0, // vezes que o redirect automatico foi executando ao tentar acessar uma pagina nao autorizada
+            '_auto_redirect_limit_' => 3, // limite de vezes que o redirect automatico pode ser executado antes de encerrar o script com $this->error('access denied')  
 
 
             /*  * arquivos * */
             'log' => 'path/to/file/guardian_log.log',
             'ban_file' => 'path/to/file/guardian_ban_file',
+            '_error_log_' => 'path/to/file/guardian_vacilos',
 
 
             /* * http headers * */
@@ -116,13 +116,14 @@ class Guardian
             'http_header_unsafe_inline' =>  1,
             'http_header_unsafe_eval' => 1,
             'http_header_allow_subdomains' => 0,
-            'http_header_cache_control' => 'public', // public | private ou string configurando
-            'http_header_x_content_type_options' => 'nosniff', // 0 disable or string
+            'http_header_cache_control' => 'no-store, no-cache, must-revalidate', // public | private ou string configurando (se omitido, usa padrao sistema)
+            'http_header_x_content_type_options' => 'nosniff', // 0 disable  or custom string // se omitido, usa o padrao sistema
             //"X-Content-Type-Options: nosniff",
-            'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or string
+            'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or custom string // se omitido, usa o padrao sistema
             //"X-Frame-Options: SAMEORIGIN",
-            'http_header_set_cookie' => 0, // 0 disable or string
-            //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
+            'http_header_set_cookie' => 0, // 0 disable 1 string padrao sistema or custom string (string padrao define o path como /)
+            //string padrao sistema => "Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
+            //desabilitar caso chamar a classe fora do diretorio base do script. ou entao tera erro #2.1
             'http_header_content_security_policy' => 1, // 0 disable
             //"Content-Security-Policy: $CSP_string",        
             'http_header_x_xss_protection' => 1, // 0 disable, 1 enable(sanitize), 1; mode=block[otherOption]
@@ -142,6 +143,15 @@ class Guardian
     {
         foreach ($this->Defaults as $key => $value) {
             switch ($key) {
+                    // setados somente em monitore:
+                case '_auto_redirect_times_':
+                case '_auto_redirect_limit_':
+                    // setado somente no login:
+                case 'logado':
+                    // uso interno:
+                case '_error_log_':
+                    continue;
+                    break;
                 case '_setup_':
                     $this->Defaults[$key] = 1;
                     break;
@@ -199,10 +209,10 @@ class Guardian
     {
         // inits begin...
         // /*
-        $this->init_load();
-        $base_dir = $this->Definitions['base_dir'];
+        //$this->init_load();
+        $base_dir = (isset($this->Definitions['base_dir'])) ? $this->Definitions['base_dir'] : '';
         if ($base_dir != '') {
-            // if the last character is not a slash add
+            // if the last character is not a slash add (para login.php dar include nos assets)
             if ($base_dir[strlen($base_dir) - 1] != '/') $base_dir .= '/';
         }
         $this->Definitions['base_dir'] = $base_dir;
@@ -210,7 +220,7 @@ class Guardian
         $this->init_headers();
         $this->init_temporizadores();
         $this->init_html_form_validators();
-        $this->set_session('max_fail', $this->Definitions['max_fail']);
+        $this->set_session('max_fail', ((isset($this->Definitions['max_fail'])?$this->Definitions['max_fail']:$this->Defaults['max_fail'])));
         $this->set_session('count_fail', 0);
         $this->init_pages();
         $this->init_files();
@@ -234,9 +244,11 @@ class Guardian
     public function monitore($isMainPage = false)
     {
         $this->init_load();
-        $is_logged = (bool) $this->get_session('logged_in');
-
-        if (isset($_GET[$this->Definitions['logout_uri_name']])) {
+        $is_logged = ($this->is_session_set('logado')) ? (bool) $this->get_session('logado') : false;
+        $uri_name = (isset($this->Definitions['logout_uri_name']))
+            ? $this->Definitions['logout_uri_name']
+            : $this->Defaults['logout_uri_name'];
+        if (isset($_GET[$uri_name])) {
             $this->logout();
         }
         // check ban
@@ -246,12 +258,31 @@ class Guardian
         }
         if (!$isMainPage) {
             if (!$is_logged) {
-                $this->http_header = 401;
-                $this->error("access denied");
+                LazzyCode:
+                $page = ($this->is_session_set('logout_page'))
+                    ? $this->get_session('logout_page')
+                    : ($this->is_session_set('main_page') ? $this->get_session('main_page') : false);
+                if ($page && file_exists($page)) {
+                    $this->redirect($page);
+                } else {
+                    if (!$this->auto_redirect_exceeds_limit()) {
+                        $this_page = $this->get_pwd_file();
+                        if ($this_page && (file_exists($this_page)||is_dir($this_page))) {
+                            $this->redirect($this_page);
+                        }
+                        $this->http_header = 401;
+                        $this->error("access denied");
+                    } else {
+                        $this->http_header = 401;
+                        $this->error("access denied");
+                    }
+                }
             }
             // usando paginas autenticadas?
             $auth = ((is_array($this->Definitions['_logged_pages_'])) && count($this->Definitions['_logged_pages_']) > 0);
-            if ($auth && !$this->is_authenticated_page()) {
+            if ($auth && !$this->is_authenticated_page() ){ //&& $this->auto_redirect_exceeds_limit()) {
+                // vai funfar? vamos testar...
+                goto LazzyCode;
                 $this->http_header = 401;
                 $this->error('access denied.');
             }
@@ -430,13 +461,40 @@ class Guardian
         'html_form_start_time'  => time(), // always renew
         */
         $html_form_start_time_name = 'html_form_start_time';
+        /*
+        campos html_form_username e html_form_password sao hidden, campos input sao apenas mascara para pegar os valores digitados
+        esses vals serao transportados para o hidden e o post eh via ajax.post
+        javascript deve retirar o primeiro caracter das strings mascara. esse valor representa o real nome dos respectivos hidden
+        */
+        $tag = '<input type="hidden" name="%s" id="%s" value="%s" />';
+        $username = $this->get_session('html_form_username');
+        $password = $this->get_session('html_form_password');
+        $fake_input_username = $this->get_random_string(1) . $username;
+        $fake_input_password = $this->get_random_string(1) . $password;
+        $required_hidden_fields = 
+            sprintf(
+                $tag, 
+                $this->get_session('html_form_tokenname'), 
+                $this->get_session('html_form_tokenname'), 
+                $this->get_session('html_form_tokenvalue')
+            ). sprintf(
+                $tag, 
+                $html_form_start_time_name, 
+                $html_form_start_time_name, 
+                time()
+            ). sprintf(
+                $tag, 
+                $username, 
+                $username, 
+                ''
+            ). sprintf($tag, $password, $password, '');
+
         return [
             'login_page_title' => $this->get_session('login_page_title'),
-            'username' => $this->get_session('html_form_username'),
-            'password' => $this->get_session('html_form_password'),
+            'username' => $fake_input_username,
+            'password' => $fake_input_password,
             'formname' => $this->get_session('html_form_formname'),
-            'token' => '<input type="hidden" name="' . $this->get_session('html_form_tokenname') . '" value="' . $this->get_session('html_form_tokenvalue') . '">',
-            'start_time' => '<input type="hidden" name="' . $html_form_start_time_name . '" value="' . time() . '">',
+            'required_hidden_fields' => $required_hidden_fields,
         ];
     }
     public function logout()
@@ -449,7 +507,9 @@ class Guardian
                 if (!file_exists($pg)) {
                     $this->destroy_session();
                     $this->http_header = 404;
-                    $this->error('logout pages not found');
+                    //$this->error('logout pages not found');
+                    // simplesmente redireciona pra guardian_base_file
+                    $this->redirect($this->Defaults['guardian_base_file']);
                 }
             }
         }
@@ -483,7 +543,7 @@ class Guardian
             ->set_session('html_form_tokenname', $this->Definitions['html_form_tokenname'], true)
             ->set_session('html_form_start_time', $this->Definitions['html_form_start_time'], true)
             ->set_session('_token_', $this->Definitions['_token_'], true)
-            ->set_session('logged_in', false, true);
+            ->set_session('logado', false, true);
     }
     private function __get_post()
     {
@@ -553,7 +613,7 @@ class Guardian
 
             if ($token == $tokenvalue && $user == $username && $pass == $password) {
 
-                $this->set_session('logged_in', true);
+                $this->set_session('logado', true);
                 // unset posts
                 foreach ($_POST as $key => $val) {
                     unset($_POST[$key]);
@@ -563,7 +623,7 @@ class Guardian
                 return "1";
             } else {
                 $this->reset_form_values();
-                $this->set_session('logged_in', false);
+                $this->set_session('logado', false);
 
                 $max_fail = intval($this->get_session('max_fail'));
                 $count_fail = intval($this->get_session('count_fail'));
@@ -577,7 +637,7 @@ class Guardian
                 }
             }
         }
-        $this->set_session('logged_in', false);
+        $this->set_session('logado', false);
         return "0";
     }
 
@@ -692,6 +752,10 @@ class Guardian
     }
     protected function init_pages()
     {
+        // teste: caso guardian seja usado por mais de um sistema, ao sair de um e ir pro outro, vai dar page not found.
+        // para evitar que o codigo "morra", pego essas dead pages e comparo com o diretorio da chamada.
+        // ver no final do código
+        $change_pages = [];
         $keys = [
             'main_page',
             'login_page',
@@ -710,11 +774,36 @@ class Guardian
                     $page = $this->format_path($this->Definitions[$key]);
                     $this->set_debug("$key [$page]", 'init_pages');
                     if (file_exists($page)) {
-                        $this->set_session($key, $page);
+                        // verificando se houve mudança entre session e definitions. se sim, possivel alteração de diretorio/sistema.
+                        if ( !$this->is_session_set($key)){
+                            $this->set_session($key, $page);
+                        }else{
+                            $session_page = $this->get_session($key);
+                            if ($session_page != $page){
+                                $change_pages[$key] = $page;
+                            }
+                        }                        
                     } else {
-                        $this->error("Page $key [$page] not found");
+                        $this->error("Page $key [$page] not found.");
                     }
                     break;
+            }
+        }
+        if ( count($change_pages) > 0){
+            if ( !$this->is_session_set('_auto_redirect_times_')){
+                $main_page = $this->get_session('main_page');
+                if( $main_page && file_exists($main_page)){
+                    $this->destroy_session();
+                    // respira
+                    usleep(100);
+                    $this->set_session('_auto_redirect_times_', 1);
+                    $this->redirect($main_page);
+                }else{
+                    $this->error("Page change detected and new main_page not found. Please, close you browser and open again.");
+                }
+            }else{
+                $this->error("Page change detected. Configurations could not be loaded. 
+                    Please, close you browser and check your setup options.");
             }
         }
         if (count($this->Definitions['_logged_pages_']) > 0) {
@@ -821,7 +910,7 @@ class Guardian
             ini_set('display_startup_errors', 1);
             error_reporting(E_ALL);
             ini_set('html_errors', 1);
-            ini_set('error_log', 'guardian_vacilos_php.log');
+            ini_set('error_log', $this->Defaults['_error_log_']);
         } else {
             ini_set('display_errors', 0);
             ini_set('display_startup_errors', 0);
@@ -943,7 +1032,7 @@ class Guardian
 
 
         $cache = $this->get_session('http_header_cache_control');
-        $cache_control = "Cache-Control: public"; //"Cache-Control: no-store, no-cache, must-revalidate";
+        $cache_control = "Cache-Control: no-store, no-cache, must-revalidate"; //public, private, no-store, no-cache, must-revalidate
         if (!is_null($cache)) {
             $cache_control = "Cache-Control: $cache";
         }
@@ -987,7 +1076,7 @@ class Guardian
         'http_header_x_frame_options' => 'SAMEORIGIN', // 0 disable or string
         //"X-Frame-Options: SAMEORIGIN",
 
-        'http_header_set_cookie' => 0, // 0 disable or string
+        'http_header_set_cookie' => 0, // 0 disable 1 cookie string padrao sistema or custom string
         //"Set-Cookie: xyz=a1b2c3; SameSite=Strict; path=/",
 
         'http_header_content_security_policy' => 1, // 0 disable
@@ -1146,7 +1235,7 @@ class Guardian
     protected function redirect($page)
     {
         $this->set_debug($page, 'redirect');
-        if (file_exists($page)) {
+        if (file_exists($page)||is_dir($page)) {
             echo "<script>window.location='$page';</script>";
         } else {
             $this->error('redirect: file "' . $page . '" not found');
@@ -1309,11 +1398,25 @@ class Guardian
         if (isset($_SERVER[$key])) {
             return $_SERVER[$key];
         }
-        if ( $die ){
+        if ($die) {
+            $this->http_response_code = 500;
+            $this->printHeader();
+            echo "<h1>Internal Server Error</h1>";
             exit("<!-- Error $key! -->");
         }
         return null;
     }
+    protected function auto_redirect_exceeds_limit()
+    {
+        $times = ($this->is_session_set('_auto_redirect_times_')) ? intval($this->get_session('_auto_redirect_times_'))+1 : 1;
+        $this->set_session('_auto_redirect_times_', $times);
+        if ($times >= $this->Defaults['_auto_redirect_limit_']) {
+            return true;
+        }
+        return false;
+    }
+
+
 
     // ******* DEBUG METHODS *******
     private function set_debug($msg, $from_function = '')

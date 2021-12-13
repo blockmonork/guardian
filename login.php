@@ -4,21 +4,30 @@ use Core\Guardian;
 
 if (!isset($guardian)) exit;
 
+$debugando = 1; // usado para setar login_funcs.js em files
+
 $f = $guardian->get_html_form_infos();
 $inputUser = $f['username'];
 $inputPass = $f['password'];
 $formName = $f['formname'];
-$hiddenTokenInput = $f['token'];
-$startTime = $f['start_time'];
+$required_hidden_fields = $f['required_hidden_fields'];
 $loginPageTitle = $f['login_page_title'];
 // base_dir to include files
 $d = $guardian->get('base_dir') . 'assets/';
+
+$login_funcs = [
+    'fn.js',
+    'login_funcs.js'
+];
+
 $files = [
     'jquery' => 'jq.js',
     'google_fonts' => 'gf.css',
     'materialize_css' => 'mt.css',
-    'materialize_js' => 'mt.js', // materialize
-    'crypto' => 'cr.js', // crypto
+    'materialize_js' => 'mt.js', 
+    'crypto' => 'cr.js', 
+    'c_css' => 'c.css', // login styles
+    'fn' => $login_funcs[$debugando],
 ];
 
 ?>
@@ -34,32 +43,7 @@ $files = [
 
     <link href="<?php echo $d . $files['google_fonts']; ?>" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo $d . $files['materialize_css']; ?>" media="screen,projection" type="text/css">
-
-    <style>
-        .containerLg {
-            margin-top: 50px;
-            margin-right: auto;
-            margin-bottom: auto;
-            margin-left: auto;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 20px;
-            background-color: #efefef;
-        }
-
-        h3 {
-            text-shadow: 1px 2px 0 grey;
-            margin-top: -5px
-        }
-
-        pre {
-            background-color: #efefef;
-            padding: 10px;
-            border-radius: 10px;
-            width: 50%;
-            margin: 0 auto;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="<?php echo $d . $files['c_css']; ?>">
 </head>
 
 <body>
@@ -67,12 +51,14 @@ $files = [
         <h3 class="valign-wrapper">
             <i class="material-icons left">lock</i>
             <?php echo $loginPageTitle; ?>
+            <span>
+                <?php echo $guardian->vs; ?>  
+            </span>
         </h3>
         <div class="row">
             <form name="<?php echo $formName; ?>" class="col s12" action="index.php" method="post">
                 <?php
-                echo $hiddenTokenInput;
-                echo $startTime;
+                echo $required_hidden_fields;
                 ?>
                 <div class="row">
                     <div class="input-field col s12">
@@ -92,7 +78,7 @@ $files = [
                 </div>
                 <div class="row">
                     <div class="input-field col s12">
-                        <span onclick="sbmt()" id="btn-submit" class="btn btn-large waves-effect waves-light col s12">
+                        <span onclick="sb()" id="btn-submit" class="btn btn-large waves-effect waves-light col s12">
                             login
                             <i class="material-icons left">lock_open</i>
                         </span>
@@ -117,13 +103,41 @@ $files = [
     </div>
 
     <script>
-        const _v_ = [4, 50, "<?php echo $inputUser ?>", "<?php echo $inputPass ?>", "<?php echo $formName ?>"];
+        <?php
+        /*
+        sequencia de const _v_:
+        0 - min char length
+        1 - max char length
+        2 - fake inputname | real input hidden = fake_input.substr(1, fake_input.length)
+        3 - fake inputpass | real idem a 2
+        4 - form name
+        5 - msg bogus - soh pra confundir :)
+        6 - mensagem padrao de strlen
+        7 - msg_especial_char
+        8 - msg_number_required
+        9 - msg_lowerCase
+        10 - msg_upperCase
+        */
+        $min_len = 4;
+        $max_len = 50;
+        $user = '"'.$inputUser.'"';
+        $pass = '"' . $inputPass . '"';
+        $form = '"' . $formName . '"';
+        $bogus = '"' . md5('a1.'.time()) . '"';
+        $msgStrLen = '"' . base64_encode("must be between $min_len and $max_len characters") . '"';
+        $msgEspChar = '"' . base64_encode("pass must contain at least one special character") . '"';
+        $msgNum = '"' . base64_encode("pass must contain at least one number") . '"';
+        $msgLow = '"' . base64_encode("pass must contain at least one lowercase letter") . '"';
+        $msgUp = '"' . base64_encode("pass must contain at least one uppercase letter") . '"';
+
+        echo 'const _v_ = ['.$min_len.', '.$max_len.', '.$user.', '.$pass.', '.$form.', '.$bogus.', '.$msgStrLen.', '.$msgEspChar.', '.$msgNum.', '.$msgLow.', '.$msgUp.']; ';
+        ?>
     </script>
     <script type="text/JavaScript" src="<?php echo $d . $files['jquery']; ?>"></script>
     <script type="text/JavaScript" src="<?php echo $d . $files['materialize_js']; ?>"></script>
     <script type="text/JavaScript" src="<?php echo $d . $files['crypto']; ?>"></script>
 
-    <script type="text/JavaScript" src="<?php echo $d; ?>fn.js"></script>
+    <script type="text/JavaScript" src="<?php echo $d . $files['fn']; ?>"></script>
 </body>
 
 </html>
