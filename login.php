@@ -4,7 +4,7 @@ use Core\Guardian;
 
 if (!isset($guardian)) exit;
 
-$debugando = 1; // usado para setar login_funcs.js em files
+$debugando = 0; // usado para setar fn.js(0) || login_funcs.js(1) e login_css em files
 
 $f = $guardian->get_html_form_infos();
 $inputUser = $f['username'];
@@ -19,6 +19,10 @@ $login_funcs = [
     'fn.js',
     'login_funcs.js'
 ];
+$login_css = [
+    'c.css',
+    'login_css.css',
+];
 
 $files = [
     'jquery' => 'jq.js',
@@ -26,7 +30,7 @@ $files = [
     'materialize_css' => 'mt.css',
     'materialize_js' => 'mt.js', 
     'crypto' => 'cr.js', 
-    'c_css' => 'c.css', // login styles
+    'c_css' => $login_css[$debugando], // login styles
     'fn' => $login_funcs[$debugando],
 ];
 
@@ -101,8 +105,6 @@ $files = [
             </form>
         </div>
     </div>
-
-    <script>
         <?php
         /*
         sequencia de const _v_:
@@ -119,7 +121,9 @@ $files = [
         10 - msg_upperCase
         */
         $min_len = 4;
+        $minLen = '"' . base64_encode($min_len) . '"';
         $max_len = 50;
+        $maxLen = '"' . base64_encode($max_len) . '"';
         $user = '"'.$inputUser.'"';
         $pass = '"' . $inputPass . '"';
         $form = '"' . $formName . '"';
@@ -130,13 +134,14 @@ $files = [
         $msgLow = '"' . base64_encode("pass must contain at least one lowercase letter") . '"';
         $msgUp = '"' . base64_encode("pass must contain at least one uppercase letter") . '"';
 
-        echo 'const _v_ = ['.$min_len.', '.$max_len.', '.$user.', '.$pass.', '.$form.', '.$bogus.', '.$msgStrLen.', '.$msgEspChar.', '.$msgNum.', '.$msgLow.', '.$msgUp.']; ';
+
+        $so = '<script>';
+        $sc = '</script>';
+        echo $so . 'const _v_ = ['.$minLen.', '.$maxLen.', '.$user.', '.$pass.', '.$form.', '.$bogus.', '.$msgStrLen.', '.$msgEspChar.', '.$msgNum.', '.$msgLow.', '.$msgUp.']; ' . $sc;
         ?>
-    </script>
     <script type="text/JavaScript" src="<?php echo $d . $files['jquery']; ?>"></script>
     <script type="text/JavaScript" src="<?php echo $d . $files['materialize_js']; ?>"></script>
     <script type="text/JavaScript" src="<?php echo $d . $files['crypto']; ?>"></script>
-
     <script type="text/JavaScript" src="<?php echo $d . $files['fn']; ?>"></script>
 </body>
 

@@ -32,9 +32,9 @@ function cl1() {
     var e = _g(_v_[2]).value,
         t = _g(_v_[3]).value,
         s = !0;
-    return e.length < _v_[0] || e.length > _v_[1]
+    return e.length < _a(0) || e.length > _a(1)
         ? (shp(_v_[2], `user ${_a(6)}`), s = !1)
-        : shp(_v_[2], "right"), t.length < _v_[0] || t.length > _v_[1]
+        : shp(_v_[2], "right"), t.length < _a(0) || t.length > _a(1)
             ? (shp(_v_[3], `pass ${_a(6)}`), s = !1)
             : shp(_v_[3], "right"), !!s && cp1()
 }
