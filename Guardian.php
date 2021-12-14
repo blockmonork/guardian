@@ -290,7 +290,7 @@ class Guardian
             $auth = ((is_array($this->Definitions['_logged_pages_'])) && count($this->Definitions['_logged_pages_']) > 0);
             if ($auth && !$this->is_authenticated_page() ){ //&& $this->auto_redirect_exceeds_limit()) {
                 // vai funfar? vamos testar...
-                goto LazzyCode;
+                // goto LazzyCode; perigo...
                 $this->http_header = 401;
                 $this->error('access denied.');
             }
@@ -427,7 +427,7 @@ class Guardian
     }
     public function sanitize_as($value, $as = 'text')
     {
-        //if (empty($value) || strlen($value) == 0) return $value;
+        if (empty($value) || strlen($value) == 0) return $value;
         //https://theasciicode.com.ar/ascii-printable-characters/backslash-reverse-slash-ascii-code-92.html
         $Map = [
             '<' => '&lt;',
