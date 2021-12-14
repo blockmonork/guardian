@@ -191,6 +191,14 @@ class Guardian
             }
         }
         $this->set_session('_setup_', 1);
+        if ($this->debug) {
+            echo "<br><b>after setup:</b><pre>";
+            foreach ($this->Definitions as $key => $value) {
+                $v = (is_array($value)) ? 'array: ' . implode(',', $value) : $value;
+                echo $key . ' = ' .  $v . '<br>';
+            }
+            echo '</pre>';
+        }
         return $this;
     }
     public function print_header()
