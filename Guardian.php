@@ -17,7 +17,7 @@ class Guardian
     private $debug_msg = [];
     private $http_header = 200;
 
-    public $vs = '2021.12.13';
+    public $vs = '2021.12.15';
 
 
 
@@ -216,8 +216,7 @@ class Guardian
     public function start()
     {
         // inits begin...
-        // /*
-        //$this->init_load();
+        $this->check_env();
         $base_dir = (isset($this->Definitions['base_dir'])) ? $this->Definitions['base_dir'] : '';
         if ($base_dir != '') {
             // if the last character is not a slash add (para login.php dar include nos assets)
@@ -228,25 +227,13 @@ class Guardian
         $this->init_headers();
         $this->init_temporizadores();
         $this->init_html_form_validators();
-        $this->set_session('max_fail', ((isset($this->Definitions['max_fail'])?$this->Definitions['max_fail']:$this->Defaults['max_fail'])));
+        $this->set_session('max_fail', ((isset($this->Definitions['max_fail']) ? $this->Definitions['max_fail'] : $this->Defaults['max_fail'])));
         $this->set_session('count_fail', 0);
         $this->init_pages();
         $this->init_files();
         $this->init_posts();
         $this->init_gets();
-        // */
-
-        if ($this->debug) {
-            $this->get_debug();
-            echo "<br><b>after start:</b><pre>";
-            foreach ($this->Defaults as $key => $value) {
-                $val = $this->get_session($key);
-                $v = (is_array($val)) ? 'array: ' . implode(',', $val) : $val;
-                echo $key . ' = ' .  $v . '<br>';
-            }
-            echo '</pre>';
-        }
-
+        $this->break_point('start');
         return $this;
     }
     public function monitore($isMainPage = false)
@@ -275,7 +262,7 @@ class Guardian
                 } else {
                     if (!$this->auto_redirect_exceeds_limit()) {
                         $this_page = $this->get_pwd_file();
-                        if ($this_page && (file_exists($this_page)||is_dir($this_page))) {
+                        if ($this_page && (file_exists($this_page) || is_dir($this_page))) {
                             $this->redirect($this_page);
                         }
                         $this->http_header = 401;
@@ -288,7 +275,7 @@ class Guardian
             }
             // usando paginas autenticadas?
             $auth = ((is_array($this->Definitions['_logged_pages_'])) && count($this->Definitions['_logged_pages_']) > 0);
-            if ($auth && !$this->is_authenticated_page() ){ //&& $this->auto_redirect_exceeds_limit()) {
+            if ($auth && !$this->is_authenticated_page()) { //&& $this->auto_redirect_exceeds_limit()) {
                 // vai funfar? vamos testar...
                 // goto LazzyCode; perigo...
                 $this->http_header = 401;
@@ -479,23 +466,23 @@ class Guardian
         $password = $this->get_session('html_form_password');
         $fake_input_username = $this->get_random_string(1) . $username;
         $fake_input_password = $this->get_random_string(1) . $password;
-        $required_hidden_fields = 
+        $required_hidden_fields =
             sprintf(
-                $tag, 
-                $this->get_session('html_form_tokenname'), 
-                $this->get_session('html_form_tokenname'), 
+                $tag,
+                $this->get_session('html_form_tokenname'),
+                $this->get_session('html_form_tokenname'),
                 $this->get_session('html_form_tokenvalue')
-            ). sprintf(
-                $tag, 
-                $html_form_start_time_name, 
-                $html_form_start_time_name, 
+            ) . sprintf(
+                $tag,
+                $html_form_start_time_name,
+                $html_form_start_time_name,
                 time()
-            ). sprintf(
-                $tag, 
-                $username, 
-                $username, 
+            ) . sprintf(
+                $tag,
+                $username,
+                $username,
                 ''
-            ). sprintf($tag, $password, $password, '');
+            ) . sprintf($tag, $password, $password, '');
 
         return [
             'login_page_title' => $this->get_session('login_page_title'),
@@ -731,8 +718,9 @@ class Guardian
         }
         $CM = strtoupper($this->Definitions['_credentials_method_']);
         if ($CM == 'G' || $CM == 'GETENV') {
-            $U = getenv('GUARDIANUSER');
-            $P = getenv('GUARDIANPASS');
+            // caso: getenv == '' depois de upgrade php-8.1 em vb.
+            $U = (!empty(getenv('GUARDIANUSER'))) ? getenv('GUARDIANUSER') : '';
+            $P = (!empty(getenv('GUARDIANPASS'))) ? getenv('GUARDIANPASS') : '';
         } else {
             $U = $this->Definitions['_user_'];
             $P = $this->Definitions['_pass_'];
@@ -783,33 +771,33 @@ class Guardian
                     $this->set_debug("$key [$page]", 'init_pages');
                     if (file_exists($page)) {
                         // verificando se houve mudança entre session e definitions. se sim, possivel alteração de diretorio/sistema.
-                        if ( !$this->is_session_set($key)){
+                        if (!$this->is_session_set($key)) {
                             $this->set_session($key, $page);
-                        }else{
+                        } else {
                             $session_page = $this->get_session($key);
-                            if ($session_page != $page){
+                            if ($session_page != $page) {
                                 $change_pages[$key] = $page;
                             }
-                        }                        
+                        }
                     } else {
                         $this->error("Page $key [$page] not found.");
                     }
                     break;
             }
         }
-        if ( count($change_pages) > 0){
-            if ( !$this->is_session_set('_auto_redirect_times_')){
+        if (count($change_pages) > 0) {
+            if (!$this->is_session_set('_auto_redirect_times_')) {
                 $main_page = $this->get_session('main_page');
-                if( $main_page && file_exists($main_page)){
+                if ($main_page && file_exists($main_page)) {
                     $this->destroy_session();
                     // respira
                     usleep(100);
                     $this->set_session('_auto_redirect_times_', 1);
                     $this->redirect($main_page);
-                }else{
+                } else {
                     $this->error("Page change detected and new main_page not found. Please, close you browser and open again.");
                 }
-            }else{
+            } else {
                 $this->error("Page change detected. Configurations could not be loaded. 
                     Please, close you browser and check your setup options.");
             }
@@ -1243,7 +1231,7 @@ class Guardian
     protected function redirect($page)
     {
         $this->set_debug($page, 'redirect');
-        if (file_exists($page)||is_dir($page)) {
+        if (file_exists($page) || is_dir($page)) {
             echo "<script>window.location='$page';</script>";
         } else {
             $this->error('redirect: file "' . $page . '" not found');
@@ -1416,7 +1404,7 @@ class Guardian
     }
     protected function auto_redirect_exceeds_limit()
     {
-        $times = ($this->is_session_set('_auto_redirect_times_')) ? intval($this->get_session('_auto_redirect_times_'))+1 : 1;
+        $times = ($this->is_session_set('_auto_redirect_times_')) ? intval($this->get_session('_auto_redirect_times_')) + 1 : 1;
         $this->set_session('_auto_redirect_times_', $times);
         if ($times >= $this->Defaults['_auto_redirect_limit_']) {
             return true;
@@ -1441,6 +1429,42 @@ class Guardian
         $msg_log = implode("\n", $this->debug_msg);
         $this->set_log($msg_log);
         echo "<b>get_debug()::debug_msg is:</b><pre>$msg</pre>";
+    }
+    private function break_point($where, $dumpSomething = [], $thenDie = true)
+    {
+        if ($this->debug) {
+            $this->get_debug();
+            echo "<br>BREAK POINT - DEBUG AFTER <b>$where :</b><pre>";
+            foreach ($this->Defaults as $key => $value) {
+                $val = $this->get_session($key);
+                $v = (is_array($val)) ? 'array: ' . implode(',', $val) : $val;
+                echo $key . ' = ' .  $v . '<br>';
+            }
+            echo '</pre>';
+            if (count($dumpSomething) > 0) {
+                echo '<b>DUMP:</b><pre>';
+                var_dump($dumpSomething);
+                echo '</pre>';
+            }
+            if ($thenDie) {
+                exit();
+            }
+        }
+    }
+    private function check_env()
+    {
+        $functions = [
+            'hash',
+            'md5',
+            'getenv',
+            'headers_sent'
+        ];
+        foreach ($functions as $fn) {
+            if (!function_exists($fn)) {
+                echo "<hr><p align='center'><b>check_env::FUNCTION $fn !EXISTS...ABORT</b></p><hr>";
+                exit;
+            }
+        }
     }
 
     // ******* MESSAGE METHODS *******
