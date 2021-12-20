@@ -59,7 +59,7 @@ function sb() {
     if (cl1()) {
         _g(_u(_v_[2])).value = _s(_v_[2]);
         _g(_v_[2]).value = '';
-        _g(_u(_v_[3])).value = _s(_u(_v_[3]));
+        _g(_u(_v_[3])).value = _s(_v_[3]);
         _g(_v_[3]).value = '';
         document.forms[_v_[4]].submit();
     }
@@ -72,7 +72,7 @@ function shp(e, t) {
 
 function cl1() {
     var e = _g(_v_[2]).value,
-        t = _g(_u(_v_[3])).value,
+        t = _g(_v_[3]).value,
         s = !0;
     return e.length < _a(0) || e.length > _a(1)
         ? (shp(_v_[2], `user ${_a(6)}`), s = !1)
@@ -82,7 +82,7 @@ function cl1() {
 }
 
 function cp1() {
-    var e = _g(_u(_v_[3])).value;
+    var e = _g(_v_[3]).value;
     return /[A-Z]/.test(e)
         ? /[a-z]/.test(e)
             ? /[0-9]/.test(e)
@@ -100,11 +100,10 @@ document.querySelector("#" + _v_[2]).focus(), document.querySelector("#" + _v_[2
     cl1()
 });
 $(document).ready(function () {
-    //const inames = 'input#' + _v_[2] + ', input#' + _v_[3];
-    //$(inames).characterCounter();
-    $('input#' + _v_[2] + ', input#' + _v_[3]).characterCounter();
-    fkP.sp(_v_[3], _u(_v_[3]));
+    const inames = 'input#' + _v_[2] + ', input#' + _v_[3];
+    $(inames).characterCounter();
 })
 
+// generate a javascript function to send an ajax post request to index.php
 
 

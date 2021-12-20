@@ -40,7 +40,8 @@ function assets($name)
     ];
     if (!array_key_exists($name, $files)) echo "";
     $f = $d . $files[$name];
-    echo ((file_exists($f)) ? $f : "");
+    $t = ($name != 'favicon') ? '?' . time():'';
+    echo ((file_exists($f)) ? $f.$t : "");
 }
 
 ?>
@@ -84,7 +85,7 @@ function assets($name)
                 <div class="row">
                     <div class="input-field col s12">
                         <i class="material-icons prefix">verified_user</i>
-                        <input id="<?php echo $inputPass; ?>" name="<?php echo $inputPass; ?>" type="password" class="validate" autocomplete="new-password" required maxlength="50" data-length="50">
+                        <input id="<?php echo $inputPass; ?>" name="<?php echo $inputPass; ?>" type="text" class="validate" autocomplete="off" required maxlength="50" data-length="50">
                         <label for="<?php echo $inputPass; ?>">Password</label>
                         <span id="<?php echo $inputPass; ?>_helper" class="helper-text" data-error="wrong" data-success="right"></span>
                     </div>

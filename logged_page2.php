@@ -48,6 +48,10 @@ $files = [
                     <br>
                     <input type="text" name="dat" size="30" placeholder="will be sanitized as date">
                     <br>
+                    <input type="text" name="fake_pass" id="fake_pass" size="30" placeholder="fake pass">
+                    <br>
+                    <input type="text" name="hid_pass" id="hid_pass" size="30" placeholder="get fake_pass">
+                    <br>
                     <input type="submit" value="submit">
                 </form>
                 <?php
@@ -93,8 +97,53 @@ $files = [
             };
             xhttp.open("GET", "test_page2.php?ajax=1", true);
             xhttp.send();
-
         }
+        var fkP = {
+            el_target:'',
+            el_fake:'',
+            chars:[],
+            symbol:'*',
+            _g:function(i){
+                return document.getElementById(i);
+            },
+            setup : function(el_fake, el_target) {
+                this.el_target = this._g(el_target);
+                this.el_fake = this._g(el_fake);
+                // hide the target element
+                //this.el_target.style.display = 'none';
+                this.el_fake.addEventListener('keydown', this.fk);
+                this.el_fake.addEventListener('keyup', this.fk);
+                return this;
+            },
+            fk:function(){
+                var f = fkP;
+                var txt = f.el_fake.value;
+                var temp = '';
+                var len = txt.length;
+                if (len < f.chars.length && f.chars.length > 0){
+                    f.chars.pop();
+                }
+                for ( let i = 0; i < len; i++ ) {
+                    let c = txt.charAt(i);
+                    if ( f.chars[i] == undefined && c != f.symbol) {
+                        f.chars.push(c);                    
+                    }else if ( c != f.chars[i] && c != f.symbol ){
+                        f.chars[i] = c;
+                    }else{
+                        const index = f.chars.indexOf(c);
+                        if (index > -1) {
+                            f.chars.splice(index, 1);
+                        }
+                    }
+                    temp += f.symbol;
+                }
+                f.el_target.value = f.chars.join('');
+                f.el_fake.value = temp;
+            },
+        };
+        (function(){
+            fkP.setup('fake_pass', 'hid_pass');
+        })();
     </script>
 </body>
 

@@ -17,7 +17,7 @@ class Guardian
     private $debug_msg = [];
     private $http_header = 200;
 
-    public $vs = '2021.12.15';
+    public $vs = '2021.12.20';
 
 
 
