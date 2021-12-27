@@ -43,6 +43,18 @@ $files = [
                     <a href="logged_page2.php">go to page 2</a>
                 </p>
                 <?php
+                
+                echo '<h2>teste encode/decode printable string</h2>';
+                $x = 'Teste Encode/Decode printable string';
+                echo "encode $x:<br> ";
+
+                $y = $guardian->encode_printable_string($x);
+                echo $y;
+
+                echo "<br>decode $y: <br>";
+                $z = $guardian->decode_printable_string($y);
+                echo "$z<br>";
+                
                 if (isset($_GET['name']) && !empty($_GET['name'])) {
                     $name = preg_replace('/W/', '', trim(substr($_GET['name'], 0, 20)));
                     echo '<p>' . $name . '</p>';

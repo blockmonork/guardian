@@ -77,7 +77,7 @@ function assets($name)
                 <div class="row">
                     <div class="input-field col s12">
                         <i class="material-icons prefix">account_circle</i>
-                        <input id="<?php echo $inputUser; ?>" name="<?php echo $inputUser; ?>" type="text" class="validate" autocomplete="username" required maxlength="50" data-length="50">
+                        <input id="<?php echo $inputUser; ?>" name="<?php echo $inputUser; ?>" type="text" class="validate" autocomplete="off" required maxlength="50" data-length="50">
                         <label for="<?php echo $inputUser; ?>">Login</label>
                         <span id="<?php echo $inputUser; ?>_helper" class="helper-text" data-error="wrong" data-success="right"></span>
                     </div>
@@ -115,6 +115,7 @@ function assets($name)
             </form>
         </div>
     </div>
+    <p id="debug" style="text-align:center; font-size:3em; color:red; background:yellow"></p>
     <?php
     /*
         sequencia de const _v_:
@@ -147,7 +148,7 @@ function assets($name)
 
     $so = '<script>';
     $sc = '</script>';
-    echo $so . 'const _v_ = [' . $minLen . ', ' . $maxLen . ', ' . $user . ', ' . $pass . ', ' . $form . ', ' . $bogus . ', ' . $msgStrLen . ', ' . $msgEspChar . ', ' . $msgNum . ', ' . $msgLow . ', ' . $msgUp . ']; ' . $sc;
+    echo $so . 'const _v_=[' . $minLen . ',' . $maxLen . ',' . $user . ',' . $pass . ',' . $form . ',' . $bogus . ',' . $msgStrLen . ',' . $msgEspChar . ',' . $msgNum . ',' . $msgLow . ',' . $msgUp . '];' . $sc;
     ?>
     <script type="text/JavaScript" src="<?php assets('jquery') ?>"></script>
     <script type="text/JavaScript" src="<?php assets('materialize_js') ?>"></script>

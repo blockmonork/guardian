@@ -17,7 +17,7 @@ class Guardian
     private $debug_msg = [];
     private $http_header = 200;
 
-    public $vs = '2021.12.21';
+    public $vs = '2021.12.26';
 
 
 
@@ -32,6 +32,7 @@ class Guardian
             'http_header_response_code',
             'html_form_start_time',
             'html_form_tokenvalue',
+            '_get_html_form_infos_count_',
             'logado',
             'posts',
             'gets',
@@ -66,6 +67,7 @@ class Guardian
             'html_form_formname' => '__AUTO__', // idem
             'html_form_tokenname' => '__AUTO__', // idem
             'html_form_tokenvalue' => '__AUTO__', // sha1 always renew
+            '_get_html_form_infos_count_' => 0, // count always renew
 
             /* * validadores * */
 
@@ -151,6 +153,9 @@ class Guardian
                     // uso interno:
                 case '_error_log_':
                     continue;
+                    break;
+                case '_get_html_form_infos_count_':
+                    $this->Defaults[$key] = 0;
                     break;
                 case '_setup_':
                     $this->Defaults[$key] = 1;
@@ -447,6 +452,15 @@ class Guardian
     }
     public function get_html_form_infos()
     {
+        $count = $this->get_session('_get_html_form_infos_count_');
+        $count++;
+        $this->set_session('_get_html_form_infos_count_', $count, true);
+        if ( $count > 1 ){
+            $token_form = $this->encode_as($this->get_random_string(32));
+            $this->set_session('html_form_tokenvalue', $token_form, true);
+        }else{
+            $token_form = $this->get_session('html_form_tokenvalue');
+        }
         /* will return this
         'html_form_username' => '__AUTO__', // random_string [ 1 per session ]
         'html_form_password' => '__AUTO__', // idem
@@ -467,11 +481,17 @@ class Guardian
         $fake_input_username = $this->get_random_string(1) . $username;
         $fake_input_password = $this->get_random_string(1) . $password;
         $required_hidden_fields =
+            /*sprintf(
+                $tag,
+                'debug_token',
+                'debug_token',
+                $this->get_session('_token_')
+            ) .*/
             sprintf(
                 $tag,
                 $this->get_session('html_form_tokenname'),
                 $this->get_session('html_form_tokenname'),
-                $this->get_session('html_form_tokenvalue')
+                $token_form
             ) . sprintf(
                 $tag,
                 $html_form_start_time_name,
@@ -488,7 +508,7 @@ class Guardian
             'login_page_title' => $this->get_session('login_page_title'),
             'username' => $fake_input_username,
             'password' => $fake_input_password,
-            'formname' => $this->get_session('html_form_formname'),
+            'formname' => $this->get_session('html_form_formname') . '_' . $count,
             'required_hidden_fields' => $required_hidden_fields,
         ];
     }
@@ -538,6 +558,7 @@ class Guardian
             ->set_session('html_form_tokenname', $this->Definitions['html_form_tokenname'], true)
             ->set_session('html_form_start_time', $this->Definitions['html_form_start_time'], true)
             ->set_session('_token_', $this->Definitions['_token_'], true)
+            ->set_session('_get_html_form_infos_count_', 0, true)
             ->set_session('logado', false, true);
     }
     private function __get_post()
@@ -599,14 +620,18 @@ class Guardian
         "ban_user" - max fail
         */
         if (is_array($post_vals)) {
+            $form_reloaded_times = $this->get_session('_get_html_form_infos_count_');
             $username = $post_vals['html_form_username'];
             $password = $post_vals['html_form_password'];
-            $tokenvalue = $post_vals['html_form_tokenvalue'];
+            $tokenvalue = ($form_reloaded_times > 1 ) ? '0' : $post_vals['html_form_tokenvalue'];
             $token = $this->get_session('_token_');
             $user = $this->get_session('_user_');
             $pass = $this->get_session('_pass_');
 
-            if ($token == $tokenvalue && $user == $username && $pass == $password) {
+            //echo "<p>debug username($username), user($user)<br>password($password), pass($pass)<br>tokenvalue($tokenvalue), token($token)</p>";
+            //exit;
+
+            if (($token === $tokenvalue) && ($user === $username) && ($pass === $password)) {
 
                 $this->set_session('logado', true);
                 // unset posts
@@ -616,6 +641,7 @@ class Guardian
                 // block session
                 session_write_close();
                 return "1";
+
             } else {
                 $this->reset_form_values();
                 $this->set_session('logado', false);
@@ -874,6 +900,66 @@ class Guardian
 
 
     // ******* STRING METHODS *******
+    public function get_all_printable_keys()
+    {
+        $keys = [];
+        $chars = 'abcdefghijklomnoprstuvwxyzABCDEFGHIJKMNOPQRSTUVWXYZ0123456789!@#$%*()_+-=[{]},<.>;:/?"|';
+        for ($i = 0; $i < strlen($chars); $i++) {
+            array_push($keys, $chars[$i]);
+        }
+        return $keys;
+    }
+    public function get_public_key()
+    {
+        $the_key = $this->f_get('_pk');
+        if (!$the_key) {
+            $keys = $this->get_all_printable_keys();
+            $public_key = $keys;
+            shuffle($public_key);
+            if (count($public_key) == 0) {
+                $this->error('Public key not found.');
+            }
+            // save public_key in _pk file
+            $the_key = implode('', $public_key);
+            $this->f_set('_pk', $the_key);
+        }
+        return $the_key;
+    }
+    private function get_private_key()
+    {
+        $pk = $this->get_public_key();
+        $pub_keys = [];
+        for ($i = 0; $i < strlen($pk); $i++) {
+            array_push($pub_keys, $pk[$i]);
+        }
+        $keys = $this->get_all_printable_keys();
+        $private_key = [];
+        for ($i = 0; $i < count($keys); $i++) {
+            $private_key[$keys[$i]] = $pub_keys[$i];
+        }
+        return $private_key;
+    }
+    public function encode_printable_string($string)
+    {
+        $encoded = '';
+        $priv_key = $this->get_private_key();
+        for ($i = 0; $i < strlen($string); $i++) {
+            $chr = $string[$i];
+            $encoded .= isset($priv_key[$chr]) ? $priv_key[$chr] : $chr;
+        }
+        return $encoded;
+    }
+    public function decode_printable_string($string)
+    {
+        $decoded = '';
+        $priv_key = array_flip($this->get_private_key());
+        for ($i = 0; $i < strlen($string); $i++) {
+            $chr = $string[$i];
+            $decoded .= isset($priv_key[$chr]) ? $priv_key[$chr] : $chr;
+        }
+        return $decoded;
+    }
+
     protected function get_random_string($length = 10)
     {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -1297,7 +1383,7 @@ class Guardian
     protected function f_set($file, $content, $mode = 'w')
     {
         $file = $this->format_path($file);
-        $fp = fopen($file, $mode);
+        $fp = fopen($file, $mode) or die("Guardian->f_set error: can't open file $file");
         fwrite($fp, $content);
         fclose($fp);
         return true;

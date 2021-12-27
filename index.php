@@ -11,6 +11,7 @@ $refreshSession = false;
 
 $guardian = new Guardian($debug, $refreshSession);
 
+
 $guardian->setup([
     'logged_page' => ['hello.php', 'logged_page2.php'],
     ])
