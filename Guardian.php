@@ -254,7 +254,7 @@ class Guardian
         }
         if (!$isMainPage) {
             if (!$is_logged) {
-                LazzyCode:
+                //LazzyCode:
                 $page = ($this->is_session_set('logout_page'))
                     ? $this->get_session('logout_page')
                     : ($this->is_session_set('main_page') ? $this->get_session('main_page') : false);
