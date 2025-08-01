@@ -153,16 +153,12 @@ class Guardian
                     // uso interno:
                 case '_error_log_':
                     continue;
-                    break;
                 case '_get_html_form_infos_count_':
                     $this->Defaults[$key] = 0;
-                    break;
                 case '_setup_':
                     $this->Defaults[$key] = 1;
-                    break;
                 case '_logged_pages_':
                     continue; // setado abaixo
-                    break;
                 case 'logged_page':
                     $vals = (isset($array_user_definitions['logged_page']))
                         ? $array_user_definitions['logged_page']
@@ -437,17 +433,13 @@ class Guardian
                     $txt = str_replace($f, $r, $txt);
                 }
                 return $txt;
-                break;
             case 'INT':
             case 'NUM':
                 return preg_replace('/[^0-9]/', '', $value);
-                break;
             case 'DAT':
                 return preg_replace('/[^0-9\/\.\-]/', '', $value);
-                break;
             default:
                 return $value;
-                break;
         }
     }
     public function get_html_form_infos()
@@ -1481,7 +1473,7 @@ class Guardian
             return $_SERVER[$key];
         }
         if ($die) {
-            $this->http_response_code = 500;
+            //$this->http_response_code = 500;
             $this->printHeader();
             echo "<h1>Internal Server Error</h1>";
             exit("<!-- Error $key! -->");
